@@ -93,7 +93,6 @@ jobs:
   deploy_gruen:
     name: Deploy Gruen
     needs:
-     - infrastructure
      - build_gruen
     runs-on: ubuntu-latest
     environment:
