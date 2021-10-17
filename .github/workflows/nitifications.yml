@@ -17,6 +17,6 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: "The ${GITHUB_ACTOR} is trying to destroy dev because of ${{ github.event.inputs.reason }}." 
+        args: "The ${{ GITHUB_ACTOR }} is trying to destroy dev because of ${{ github.event.inputs.reason }}." 
 
-    - run: echo ${GITHUB_ACTOR}
+    - run: echo ${{ GITHUB_ACTOR }}
