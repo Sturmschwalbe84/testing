@@ -1,4 +1,6 @@
 name: Destroy Infrastructure
+env:
+  DESTROY_PASS: ${{ secrets.DESTROY_PASS }}
 
 on: 
   workflow_dispatch:
@@ -13,7 +15,7 @@ on:
 
 jobs:
   destroy:
-    if: ${{ inputs.pass == secrets.DESTROY_PASS }}
+    if: ${{ inputs.pass == env.DESTROY_PASS }}
     name: Destroy Infrastructure
     runs-on: ubuntu-latest
     strategy:
@@ -57,7 +59,7 @@ jobs:
       run: terraform destroy -auto-approve
 
   notify_pass:
-    if: ${{ inputs.pass != secrets.DESTROY_PASS }}   
+    if: ${{ inputs.pass != env.DESTROY_PASS }}   
     name: Notify about pass
     runs-on: ubuntu-latest
     steps:
