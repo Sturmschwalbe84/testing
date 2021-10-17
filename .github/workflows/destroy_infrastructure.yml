@@ -10,8 +10,6 @@ on:
         description: 'Reason'
         required: true 
 
-
-
 jobs:
   notify:
     name: Notify about destroy

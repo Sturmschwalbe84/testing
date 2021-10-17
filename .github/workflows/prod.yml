@@ -15,7 +15,6 @@ on:
       - '.gitignore'
       - 'README.md'
       
-      
 jobs:
   test:
     name: Test
@@ -89,6 +88,7 @@ jobs:
         uses: int128/create-ecr-repository-action@v1
         with:
           repository: ${{ env.GRUEN_REPOSITORY }}
+          lifecycle-policy: Policy/green_policy.json
       
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
@@ -217,6 +217,7 @@ jobs:
        uses: int128/create-ecr-repository-action@v1
        with:
          repository: ${{ env.BLAU_REPOSITORY }}
+         lifecycle-policy: Policy/blue_policy.json
       
      - name: Build, tag, and push image to Amazon ECR
        id: build-image
