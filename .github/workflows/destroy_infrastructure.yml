@@ -1,6 +1,4 @@
 name: Destroy Infrastructure
-env:
-  DESTROY_PASS: "${{ secrets.DESTROY_PASS }}"
 
 on: 
   workflow_dispatch:
@@ -8,14 +6,26 @@ on:
       name:
         description: 'Person'
         required: true
-      pass:
-        description: 'Password'
+      reason:
+        description: 'Reason'
         required: true 
 
 
+
 jobs:
+  notify:
+    name: Notify about destroy
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: send custom message with args
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        args: The ${{ inputs.name }} is trying to destroy infrustructure because of ${{ inputs.reason }}.    
+
   destroy:
-    if: ${{ inputs.pass == env.DESTROY_PASS }}
     name: Destroy Infrastructure
     runs-on: ubuntu-latest
     strategy:
@@ -58,16 +68,5 @@ jobs:
       id: destroy
       run: terraform destroy -auto-approve
 
-  notify_pass:
-    if: ${{ inputs.pass != env.DESTROY_PASS }}   
-    name: Notify about pass
-    runs-on: ubuntu-latest
-    steps:
 
-    - name: send custom message with args
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_TO }}
-        token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: The ${{ inputs.name }} is trying to destroy infrustructure with wrong password.
     
