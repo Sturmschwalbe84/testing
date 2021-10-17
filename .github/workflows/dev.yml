@@ -1,7 +1,11 @@
-name: Tests
+name: Development env
+
+env:                                      
+  DEV_REPOSITORY: python-app-dev       
+  IMAGE_TAG: "${{ github.sha }}"
 
 on:
-  pull_request:
+  push:
     branches:
       - dev
     paths-ignore:
@@ -54,3 +58,40 @@ jobs:
        env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
+  build_dev:
+    name: Build Dev
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with: 
+          repository: Sturmschwalbe84/infrastructure
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Create amazon ECR Repository
+        id: ecr
+        uses: int128/create-ecr-repository-action@v1
+        with:
+          repository: ${{ env.DEV_REPOSITORY }}
+          lifecycle-policy: Policy/dev_policy.json
+      
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        run: |
+          docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
+          docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }} 

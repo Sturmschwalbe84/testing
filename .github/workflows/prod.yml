@@ -105,7 +105,7 @@ jobs:
       name: staging
     defaults:
       run:
-        working-directory: Cluster/AWS/ECS Service Green
+        working-directory: Cluster/AWS/ECS_Green
     steps:
 
      - name: Checkout
@@ -232,7 +232,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Cluster/AWS/ECS Service Blue
+        working-directory: Cluster/AWS/ECS_Blue
     steps:
 
      - name: Checkout
