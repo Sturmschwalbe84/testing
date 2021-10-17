@@ -1,3 +1,5 @@
+name: CD Workflow
+
 env:                                      
   BLAU_REPOSITORY: python-app-blue
   GRUEN_REPOSITORY: python-app-green                
@@ -7,8 +9,6 @@ on:
   push:
     branches:
       - main 
-
-name: CD Workflow
 
 jobs:
   test:
@@ -55,50 +55,6 @@ jobs:
        env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-
-# =========================================== RUN INFRASTRUCTURE ==================================================
-
-  infrastructure:
-    name: Start AWS ECS Cluster
-    runs-on: ubuntu-latest
-    needs: test
-    strategy:
-      max-parallel: 1
-      matrix:
-        terraform_working_dir: [Cluster/AWS/VPC, Cluster/AWS/Instances]
-    defaults:
-      run: 
-        working-directory: ${{ matrix.terraform_working_dir }}
-    steps:
-
-     - name: Configure AWS credentials
-       uses: aws-actions/configure-aws-credentials@v1
-       with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-     - name: Checkout
-       uses: actions/checkout@v2
-
-     - name: Setup Terraform
-       uses: hashicorp/setup-terraform@v1
-     
-     - name: Terraform fmt
-       id: fmt
-       run: terraform fmt -check
-
-     - name: Terraform Init
-       id: init
-       run: terraform init
-
-     - name: Terraform Validate
-       id: validate
-       run: terraform validate -no-color
-
-     - name: Terraform Apply
-       id: apply
-       run: terraform apply -auto-approve
   
 # =========================================== STAGING ==================================================
 
@@ -139,9 +95,9 @@ jobs:
     needs:
      - infrastructure
      - build_gruen
+    runs-on: ubuntu-latest
     environment:
       name: staging
-    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: Cluster/AWS/ECS Service Green
@@ -186,12 +142,52 @@ jobs:
        id: apply
        run: terraform apply -var="Green_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
 
+  split_traffic:
+    name: Split Traffic
+    needs: deploy_gruen
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    defaults:
+      run:
+        working-directory: Cluster/AWS/Instances
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ secrets.AWS_REGION }}
+        
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform traffic
+        id: traffic
+        run: terraform apply -var="Traffic=split" -auto-approve
+
 # =========================================== PRODUCTION ==================================================
 
   build_blau:
     name: Build Blau
     runs-on: ubuntu-latest
-    needs: deploy_gruen
+    needs: split_traffic
     steps:
 
       - name: Checkout
@@ -219,7 +215,6 @@ jobs:
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
-
 
   deploy_blau:
     name: Deploy Blau

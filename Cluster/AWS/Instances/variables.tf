@@ -11,6 +11,15 @@ variable "Cluster_Name" {
   default = "Cluster"
 }
 
+variable "Traffic" {
+  type    = string
+  default = "blue"
+  validation {
+    condition     = var.Traffic == "blue" || var.Traffic == "blue-80" || var.Traffic == "split" || var.Traffic == "green-80" || var.Traffic == "green"
+    error_message = "Traffic can be only in these conditions: blue, blue-80, split, green-80, green."
+  }
+}
+
 variable "Environment_Tag" {
   type    = string
   default = "Exam"

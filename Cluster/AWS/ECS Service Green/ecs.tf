@@ -22,7 +22,7 @@ resource "aws_ecs_service" "VPC_ECS_Service_Green" {
     field = "instanceId"
   }
   load_balancer {
-    target_group_arn = aws_lb_target_group.VPC_Green_Target_Group.arn
+    target_group_arn = data.terraform_remote_state.Instances_State.outputs.VPC_Green_Target_Group
     container_name   = "${local.ENV_Tag}-Green-Container"
     container_port   = local.Green_App.port
   }

@@ -20,14 +20,9 @@ variable "Environment_Tag" {
   }
 }
 
-variable "Blue_Container" {
-  type    = string
-  default = "068379437484.dkr.ecr.eu-central-1.amazonaws.com/python-app-blue:97721ca7c3293855562263ac00fa8aedb161baaa"
-}
-
 variable "Green_Container" {
   type    = string
-  default = "068379437484.dkr.ecr.eu-central-1.amazonaws.com/python-app-blue:97721ca7c3293855562263ac00fa8aedb161baaa"
+  default = "068379437484.dkr.ecr.eu-central-1.amazonaws.com/python-app-green:gruen"
 }
 
 variable "Blue_Container_Params" {

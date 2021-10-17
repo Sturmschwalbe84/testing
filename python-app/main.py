@@ -15,7 +15,7 @@ flask_app = Flask(__name__)
 @flask_app.route("/", methods=['POST', 'GET'])
 def result():
     """Displaying "Hello world" message"""
-    return "Hello World 1.3"
+    return "Hello World 1.4 green"
 
 
 def number_of_workers():
