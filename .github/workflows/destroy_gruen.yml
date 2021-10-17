@@ -8,8 +8,8 @@ on:
       - completed
 
 jobs:
-  name: Destroy Gruen
   completed:
+    name: Destroy Gruen
     runs-on: ubuntu-latest
     defaults:
       run:
