@@ -55,7 +55,7 @@ jobs:
     needs: change_traffic
     defaults:
       run:
-        working-directory: Cluster/AWS/ECS Service Green
+        working-directory: Cluster/AWS/ECS_Green
     steps:
       
     - name: Checkout

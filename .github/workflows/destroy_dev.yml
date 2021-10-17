@@ -1,4 +1,4 @@
-name: Destroy Gruen
+name: Destroy Dev
 
 on: 
   workflow_dispatch:
@@ -23,14 +23,14 @@ jobs:
         args: The ${{ inputs.name }} is trying to destroy dev because of ${{ inputs.reason }}. 
 
   destroy:
-    name: Destroy Gruen
+    name: Destroy Dev
     runs-on: ubuntu-latest
     environment: 
       name: development
     needs: change_traffic
     defaults:
       run:
-        working-directory: Cluster/AWS/ECS Service Green
+        working-directory: Cluster/AWS/ECS_Dev
     steps:
       
     - name: Checkout
