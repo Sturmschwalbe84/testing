@@ -85,7 +85,6 @@ jobs:
         uses: int128/create-ecr-repository-action@v1
         with:
           repository: ${{ env.DEV_REPOSITORY }}
-          lifecycle-policy: Policy/dev_policy.json
       
       - name: Checkout
         uses: actions/checkout@v2
