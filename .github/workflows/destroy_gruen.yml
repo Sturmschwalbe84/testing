@@ -20,7 +20,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v2
-      
+        with:
+          repository: Sturmschwalbe84/infrastructure
+        
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -58,6 +60,8 @@ jobs:
       
     - name: Checkout
       uses: actions/checkout@v2
+      with:
+        repository: Sturmschwalbe84/infrastructure
       
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1

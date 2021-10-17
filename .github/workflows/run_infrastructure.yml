@@ -24,6 +24,8 @@ jobs:
 
      - name: Checkout
        uses: actions/checkout@v2
+       with:
+         repository: Sturmschwalbe84/infrastructure
 
      - name: Setup Terraform
        uses: hashicorp/setup-terraform@v1
