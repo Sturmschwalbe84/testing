@@ -12,7 +12,9 @@ on:
     paths-ignore:
       - '.github/workflows/**'
       - '.git'
+      - '.gitignore'
       - 'README.md'
+      
       
 jobs:
   test:
