@@ -1,4 +1,4 @@
-name: Destroy Infrastructure
+name: Destroy Gruen
 
 on: 
   workflow_dispatch:
@@ -9,7 +9,6 @@ on:
       reason:
         description: 'Reason'
         required: true 
-
 jobs:
   notify:
     name: Notify about destroy
@@ -21,20 +20,16 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: The ${{ inputs.name }} is trying to destroy infrustructure because of ${{ inputs.reason }}.    
+        args: The ${{ inputs.name }} is trying to destroy dev because of ${{ inputs.reason }}. 
 
   destroy:
-    name: Destroy Infrastructure
+    name: Destroy Gruen
     runs-on: ubuntu-latest
-    environment: 
-      name: release 
-    strategy:
-      max-parallel: 1
-      matrix:
-        terraform_working_dir: [Cluster/AWS/ECS_Blue, Cluster/AWS/Instances, Cluster/AWS/VPC]
+    environment: development
+    needs: change_traffic
     defaults:
       run:
-        working-directory: ${{ matrix.terraform_working_dir }}
+        working-directory: Cluster/AWS/ECS Service Green
     steps:
       
     - name: Checkout
@@ -67,6 +62,3 @@ jobs:
     - name: Terraform destroy
       id: destroy
       run: terraform destroy -auto-approve
-
-
-    

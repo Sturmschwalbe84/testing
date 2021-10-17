@@ -94,3 +94,55 @@ jobs:
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }} 
+
+  deploy_dev:
+    name: Deploy Dev
+    needs: build_dev
+    environment:
+      name: development
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Cluster/AWS/ECS_Dev
+    steps:
+
+     - name: Checkout
+       uses: actions/checkout@v2
+       with:
+          repository: Sturmschwalbe84/infrastructure
+     
+     - name: Configure AWS credentials
+       uses: aws-actions/configure-aws-credentials@v1
+       with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+     - name: Login to Amazon ECR
+       id: login-ecr
+       uses: aws-actions/amazon-ecr-login@v1
+        
+     - name: Get the name of the ECR repository
+       id: ecr
+       uses: int128/create-ecr-repository-action@v1
+       with:
+         repository: ${{ env.DEV_REPOSITORY }}
+     
+     - name: Setup Terraform
+       uses: hashicorp/setup-terraform@v1
+
+     - name: Terraform fmt
+       id: fmt
+       run: terraform fmt -check
+
+     - name: Terraform Init
+       id: init
+       run: terraform init
+
+     - name: Terraform Validate
+       id: validate
+       run: terraform validate -no-color
+
+     - name: Terraform Apply
+       id: apply
+       run: terraform apply -var="Dev_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
