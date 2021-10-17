@@ -6,7 +6,6 @@ jobs:
   infrastructure:
     name: Start AWS ECS Cluster
     runs-on: ubuntu-latest
-    needs: test
     strategy:
       max-parallel: 1
       matrix:
