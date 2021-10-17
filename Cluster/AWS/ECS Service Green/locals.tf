@@ -18,16 +18,6 @@ locals {
 }
 
 locals {
-  Blue_App = {
-    port   = 8080
-    amount = 4
-    cpu    = 128
-    memory = 128
-    image  = var.Blue_Container
-  }
-}
-
-locals {
   Green_App = {
     port   = 8080
     amount = 4
@@ -36,7 +26,6 @@ locals {
     image  = var.Green_Container
   }
 }
-
 
 # Tags for several resources
 locals {

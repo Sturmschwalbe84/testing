@@ -4,6 +4,40 @@
 # Locals
 #===========================================================================================
 
+
+locals {
+  Traffic_map = {
+    blue = {
+      blue  = 100
+      green = 0
+    }
+    blue-80 = {
+      blue  = 80
+      green = 20
+    }
+    split = {
+      blue  = 50
+      green = 50
+    }
+    green-80 = {
+      blue  = 20
+      green = 80
+    }
+    green = {
+      blue  = 0
+      green = 100
+    }
+  }
+}
+
+locals {
+  Blue_Weight = lookup(local.Traffic_map[var.Traffic], "blue", 100)
+}
+
+locals {
+  Green_Weight = lookup(local.Traffic_map[var.Traffic], "green", 0)
+}
+
 # Retrieving list of the available availability zones
 data "aws_availability_zones" "Available" {
   state = "available"
@@ -35,6 +69,15 @@ locals {
 
 locals {
   Blue_App = {
+    port   = 8080
+    amount = 4
+    cpu    = 128
+    memory = 128
+  }
+}
+
+locals {
+  Green_App = {
     port   = 8080
     amount = 4
     cpu    = 128
