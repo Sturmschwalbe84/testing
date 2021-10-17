@@ -10,9 +10,10 @@ on:
     branches:
       - main 
     paths-ignore:
-      - '.github'
+      - '.github/*+'
       - '.git'
-#
+      - 'README.md'
+      
 jobs:
   test:
     name: Test
