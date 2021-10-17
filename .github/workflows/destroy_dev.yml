@@ -25,7 +25,8 @@ jobs:
   destroy:
     name: Destroy Gruen
     runs-on: ubuntu-latest
-    environment: development
+    environment: 
+      name: development
     needs: change_traffic
     defaults:
       run:
