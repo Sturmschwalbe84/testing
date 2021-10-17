@@ -9,7 +9,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        terraform_working_dir: [Cluster/AWS/ECS Service Blue, Cluster/AWS/VPC, Cluster/AWS/Instances]
+        terraform_working_dir: [Cluster/AWS/ECS Service Blue, Cluster/AWS/Instances, Cluster/AWS/VPC]
     defaults:
       run:
         working-directory: ${{ matrix.terraform_working_dir }}
