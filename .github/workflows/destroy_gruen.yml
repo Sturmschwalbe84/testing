@@ -1,4 +1,4 @@
-name: Rejected workflow
+name: Destroy Gruen
 on:
   workflow_run:
     workflows: ["CD Workflow"]
