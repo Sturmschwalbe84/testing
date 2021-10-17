@@ -20,6 +20,6 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: The ${{ inputs.name }} is trying to destroy dev because of ${{ inputs.reason }}. 
+        args: "The ${{ inputs.name }} is trying to destroy dev because of ${{ inputs.reason }}." 
 
-    - run: echo {{ inputs.name }}
+    - run: echo ${{ inputs.name }}
