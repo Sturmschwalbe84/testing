@@ -1,6 +1,6 @@
 name: Destroy Infrastructure
 env:
-  DESTROY_PASS: ${{ secrets.DESTROY_PASS }}
+  DESTROY_PASS: "${{ secrets.DESTROY_PASS }}"
 
 on: 
   workflow_dispatch:
