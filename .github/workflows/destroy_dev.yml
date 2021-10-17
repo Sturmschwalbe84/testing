@@ -27,7 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: development
-    needs: change_traffic
     defaults:
       run:
         working-directory: Cluster/AWS/ECS_Dev
