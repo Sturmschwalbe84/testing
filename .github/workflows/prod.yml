@@ -16,6 +16,15 @@ on:
       - 'README.md'
       
 jobs:
+  notification:
+    name: Notification
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}* pushed code to the main. Code is testing and building for *green* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+  
   test:
     name: Tests
     runs-on: ubuntu-latest 
@@ -26,35 +35,27 @@ jobs:
       run: 
         working-directory: python-app
     steps:
-    
      - name: Checkout
        uses: actions/checkout@v2
-
      - name: Install Python ${{ matrix.python }}
        uses: actions/setup-python@v2
        with:
          python-version: ${{ matrix.python }}
-     
      - name: Install requirements
        run: |
          python -m pip install --upgrade pip
          pip install mypy pylint
          pip install -r requirements.txt
-
      - name: Install Snyk
        uses: snyk/actions/setup@master
-    
      - name: Run mypy
        run: mypy --ignore-missing-imports . 
-
      - name: Run pylint
        run: pylint main.py
-
      - name: Run Snyk test
        run: snyk test --file=requirements.txt --command=python3
        env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-    
      - name: Run Snyk code test
        run: snyk code test .
        env:
@@ -68,38 +69,43 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
-      
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-        
       - name: Create Amazon ECR Repository
         id: ecr
         uses: int128/create-ecr-repository-action@v1
         with:
           repository: ${{ env.GRUEN_REPOSITORY }}
           lifecycle-policy: Policy/green_policy.json
-      
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}    
 
+  gruen_notification:
+    name: Green request
+    needs: build_gruen
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}*'s code was builded and pushed to ECR. Waiting for your approval for *green* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+
   deploy_gruen:
     name: Deploy Gruen
     needs:
-     - build_gruen
+     - gruen_notification
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -107,51 +113,52 @@ jobs:
       run:
         working-directory: Cluster/AWS/ECS_Green
     steps:
-
      - name: Checkout
        uses: actions/checkout@v2
        with:
          repository: Sturmschwalbe84/infrastructure
-     
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
      - name: Login to Amazon ECR
        id: login-ecr
-       uses: aws-actions/amazon-ecr-login@v1
-        
+       uses: aws-actions/amazon-ecr-login@v1       
      - name: Get the name of the ECR repository
        id: ecr
        uses: int128/create-ecr-repository-action@v1
        with:
-         repository: ${{ env.GRUEN_REPOSITORY }}
-     
+         repository: ${{ env.GRUEN_REPOSITORY }}     
      - name: Setup Terraform
        uses: hashicorp/setup-terraform@v1
-
      - name: Terraform fmt
        id: fmt
        run: terraform fmt -check
-
      - name: Terraform Init
        id: init
        run: terraform init
-
      - name: Terraform Validate
        id: validate
        run: terraform validate -no-color
-
      - name: Terraform Apply
        id: apply
        run: terraform apply -var="Green_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
 
+  split_notification:
+    name: Split request
+    needs: deploy_gruen
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}*'s code was deployed to the *green* environment. Waiting for your approval to *split* traffic.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+
   split_traffic:
     name: Split Traffic
-    needs: deploy_gruen
+    needs: split_notification
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -159,33 +166,27 @@ jobs:
       run:
         working-directory: Cluster/AWS/Instances
     steps:
-
      - name: Checkout
        uses: actions/checkout@v2
        with:
          repository: Sturmschwalbe84/infrastructure
-      
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-           aws-region: ${{ secrets.AWS_REGION }}
-        
+           aws-region: ${{ secrets.AWS_REGION }}  
      - name: Setup Terraform
        uses: hashicorp/setup-terraform@v1
      - name: Terraform fmt
        id: fmt
        run: terraform fmt -check
-
      - name: Terraform Init
        id: init
        run: terraform init
-
      - name: Terraform Validate
        id: validate
        run: terraform validate -no-color
-
      - name: Terraform traffic
        id: traffic
        run: terraform apply -var="Traffic=split" -auto-approve
@@ -197,37 +198,42 @@ jobs:
     runs-on: ubuntu-latest
     needs: split_traffic
     steps:
-
      - name: Checkout
        uses: actions/checkout@v2
-     
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
          aws-region: ${{ secrets.AWS_REGION }}
-
      - name: Login to Amazon ECR
        id: login-ecr
-       uses: aws-actions/amazon-ecr-login@v1
-        
+       uses: aws-actions/amazon-ecr-login@v1        
      - name: Create Amazon ECR Repository
        id: ecr
        uses: int128/create-ecr-repository-action@v1
        with:
          repository: ${{ env.BLAU_REPOSITORY }}
-         lifecycle-policy: Policy/blue_policy.json
-      
+         lifecycle-policy: Policy/blue_policy.json     
      - name: Build, tag, and push image to Amazon ECR
        id: build-image
        run: |
          docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
          docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
 
+  blau_notification:
+    name: Blau request
+    needs: build_blau
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}*'s code was builded and pushed to ECR. Waiting for your approval for *BLUE* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+
   deploy_blau:
     name: Deploy Blau
-    needs: build_blau
+    needs: blau_notification
     environment:
       name: release
     runs-on: ubuntu-latest
@@ -235,44 +241,35 @@ jobs:
       run:
         working-directory: Cluster/AWS/ECS_Blue
     steps:
-
      - name: Checkout
        uses: actions/checkout@v2
        with:
-          repository: Sturmschwalbe84/infrastructure
-     
+          repository: Sturmschwalbe84/infrastructure   
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
      - name: Login to Amazon ECR
        id: login-ecr
-       uses: aws-actions/amazon-ecr-login@v1
-        
+       uses: aws-actions/amazon-ecr-login@v1 
      - name: Get the name of the ECR repository
        id: ecr
        uses: int128/create-ecr-repository-action@v1
        with:
          repository: ${{ env.BLAU_REPOSITORY }}
-     
      - name: Setup Terraform
        uses: hashicorp/setup-terraform@v1
-
      - name: Terraform fmt
        id: fmt
        run: terraform fmt -check
-
      - name: Terraform Init
        id: init
        run: terraform init
-
      - name: Terraform Validate
        id: validate
        run: terraform validate -no-color
-
      - name: Terraform Apply
        id: apply
        run: terraform apply -var="Blue_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
