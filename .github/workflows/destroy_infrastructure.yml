@@ -3,9 +3,6 @@ name: Destroy Infrastructure
 on: 
   workflow_dispatch:
     inputs:
-      name:
-        description: 'Person'
-        required: true
       reason:
         description: 'Reason'
         required: true 
