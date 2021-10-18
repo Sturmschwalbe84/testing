@@ -68,7 +68,6 @@ jobs:
         uses: snyk/actions/setup@master
       - uses: actions/setup-node@v2
       - run: npm install
-      - run: npm test
       - name: Install dockerfilelint
         run: npm install -g dockerfilelint
       - name: Run Dockerlint
