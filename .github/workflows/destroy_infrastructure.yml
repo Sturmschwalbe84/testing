@@ -44,7 +44,6 @@ jobs:
         subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
         to: ${{ secrets.MAIL_USERNAME }}
         from: "Exam homework notifications"
-        secure: true
         body: "${{ github.actor }}'s action to destroy INFRASTRUCTURE because of '${{ github.event.inputs.reason }}' was APPROVED.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}""    
 
   destroy:
