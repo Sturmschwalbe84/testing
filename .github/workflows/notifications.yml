@@ -9,6 +9,9 @@ on:
       subject:
         required: true
         type: string
+      body:
+        required: true
+        type: string
     secrets:
       token:
         required: true
@@ -41,4 +44,4 @@ jobs:
         to: reinerrubin2020@gmail.com
         from: "Exam homework notifications"
         secure: true
-        body: ${{ inputs.message }}
+        body: ${{ inputs.body }}
