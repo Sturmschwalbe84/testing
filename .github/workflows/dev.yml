@@ -66,6 +66,17 @@ jobs:
           pip install -r requirements.txt
       - name: Install Snyk
         uses: snyk/actions/setup@master
+      - name: Install Dockerlint
+        uses: luke142367/Docker-Lint-Action@v1.0.0
+      - name: Run Dockerlint
+        id: docker
+        run: |
+          OUTPUT="$(dockerfilelint Dockerfile)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=docker::$OUTPUT" 
+          echo ${{ steps.docker.outputs.docker }}
       - name: Run mypy
         id: mypy
         run: |
@@ -153,7 +164,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v1.4.5
         with:
           issue-number: ${{github.event.number}}
-          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *DEV* branch.\n\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```"
+          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n**${{ github.actor }}**'s code test results for **DEV** branch.\n\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```"
           reactions: '+1' 
           token: ${{ secrets.GITHUB_TOKEN }}
 
