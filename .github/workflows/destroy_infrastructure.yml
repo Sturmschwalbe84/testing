@@ -17,6 +17,8 @@ jobs:
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}
       
   waiting_for_approve:
     name: Waiting for approve
@@ -37,6 +39,8 @@ jobs:
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}
       
   destroy:
     name: Destroy Infrastructure
@@ -93,5 +97,7 @@ jobs:
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}
 
     
