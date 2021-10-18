@@ -51,17 +51,21 @@ jobs:
      - name: Install Snyk
        uses: snyk/actions/setup@master
      - name: Run mypy
+       id: mypy
        run: mypy --ignore-missing-imports . 
        continue-on-error: true
      - name: Run pylint
+       id: pylint
        run: pylint main.py
        continue-on-error: true
      - name: Run Snyk test
+       id: snyk_test
        run: snyk test --file=requirements.txt --command=python3
        continue-on-error: true
        env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
      - name: Run Snyk code test
+       id: snyk_code
        run: snyk code test .
        continue-on-error: true
        env:
@@ -78,7 +82,7 @@ jobs:
          to: ${{ secrets.MAIL_USERNAME }}
          from: "Exam homework notifications"
          secure: true
-         body: "${{ github.actor }}'s action for destroying INFRASTRUCTURE was REJECTED.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+         body: "${{ github.actor }}'s code test results:\n\nmypy:\n\n ${{join(steps.mypy.outputs.*, '\n')}}\n\npylint:\n${{join(steps.pylint.outputs.*, '\n')}}\n\nSnyk Test:\n${{join(steps.snyk_test.outputs.*, '\n')}}\n\nSnyk Code Test:\n${{join(steps.snyk_code.outputs.*, '\n')}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
 
   build_dev:
     name: Build Dev
