@@ -1,4 +1,4 @@
-name: Notifications
+name: Telegram Notifications
 
 on:
   workflow_call:
