@@ -78,7 +78,6 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=docker::$OUTPUT" 
-          echo ${{ steps.docker.outputs.docker }}
       - name: Run mypy
         id: mypy
         run: |
@@ -87,7 +86,6 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=mypy::$OUTPUT" 
-          echo ${{ steps.mypy.outputs.mypy }}
         continue-on-error: true
       - name: Run pylint
         id: pylint
@@ -98,7 +96,6 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=pylint::$OUTPUT"
-          echo ${{ steps.pylint.outputs.pylint }}
         continue-on-error: true
       - name: Run Snyk test
         id: snyk_test
@@ -108,7 +105,6 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=snyk_test::$OUTPUT"
-          echo ${{ steps.snyk_test.outputs.snyk_test }}
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -120,7 +116,6 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=snyk_code::$OUTPUT"
-          echo ${{ steps.snyk_code.outputs.snyk_code }}
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -166,7 +161,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v1.4.5
         with:
           issue-number: ${{github.event.number}}
-          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n**${{ github.actor }}**'s code test results for **DEV** branch.\n\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```"
+          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n**${{ github.actor }}**'s code test results for **DEV** branch.\n\n\n**dockerfilelint:**\n\n```\necho ${{ steps.docker.outputs.docker }}\n```\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```"
           reactions: '+1' 
           token: ${{ secrets.GITHUB_TOKEN }}
 
