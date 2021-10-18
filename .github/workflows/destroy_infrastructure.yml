@@ -63,5 +63,13 @@ jobs:
       run: terraform destroy -auto-approve
       continue-on-error: true
 
+  notification_2:
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    needs: destroy
+    with: 
+      message: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
 
     
