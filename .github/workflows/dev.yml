@@ -67,7 +67,7 @@ jobs:
       - name: Install Snyk
         uses: snyk/actions/setup@master
       - name: Install npm
-      - uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1
       - run: npm t
       - name: Install dockerfilelint
         run: npm install -g dockerfilelint
