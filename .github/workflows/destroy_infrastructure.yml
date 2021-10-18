@@ -13,7 +13,7 @@ jobs:
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* is requesting for approval to destroy *INFRASTRUCTURE* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-      body: "github.actor is requesting for approval to destroy INFRASTRUCTURE because of '${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      body: "${{ github.actor }} is requesting for approval to destroy INFRASTRUCTURE because of '${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       subject: Request for infrastructure destroy approval
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
@@ -29,7 +29,7 @@ jobs:
       name: release
     steps:
     - name: Send Telegram notification
-      if: ${{ job.status == 'cancelled' || job.status == 'failure' }}
+      if: always()
       uses: appleboy/telegram-action@master
       with:
         to: ${{ secrets.TELEGRAM_TO }}
@@ -37,7 +37,7 @@ jobs:
         args: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *REJECTED*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
         format: "markdown"
     - name: Send Gmail notification
-      if: ${{ job.status == 'cancelled' || job.status == 'failure' }}
+      if: always()
       uses: dawidd6/action-send-mail@v3
       with:
         username: ${{ secrets.MAIL_USERNAME }}
