@@ -13,6 +13,7 @@ jobs:
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* is requesting for approval to destroy *INFRASTRUCTURE* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      subject: Request for infrastructure destroy approval
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
@@ -32,6 +33,7 @@ jobs:
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *APPROVED*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      subject: Request for infrastructure destroy was approved.
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
@@ -87,6 +89,7 @@ jobs:
     needs: destroy
     with: 
       message: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *COMPLETED*. Infrastructure destroyed.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      subject: Infrastructure destroying completed.
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
