@@ -14,6 +14,19 @@ on:
       - 'README.md'
   
 jobs: 
+  notification:
+    name: Notification about push to dev
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}* pushed code to the main. Code is testing and building for *DEV* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body: "${{ github.actor }} pushed code to the main. Code is testing and building for DEV deployment.'${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      subject: Notification about push to dev
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}
+  
   test:
     name: Test
     runs-on: ubuntu-latest 
@@ -24,77 +37,80 @@ jobs:
       run: 
         working-directory: python-app
     steps:
-    
      - name: Checkout
        uses: actions/checkout@v2
-
      - name: Install Python ${{ matrix.python }}
        uses: actions/setup-python@v2
        with:
          python-version: ${{ matrix.python }}
-     
      - name: Install requirements
        run: |
          python -m pip install --upgrade pip
          pip install mypy pylint
          pip install -r requirements.txt
-
      - name: Install Snyk
        uses: snyk/actions/setup@master
-    
      - name: Run mypy
        run: mypy --ignore-missing-imports . 
-
+       continue-on-error: true
      - name: Run pylint
        run: pylint main.py
-
+       continue-on-error: true
      - name: Run Snyk test
        run: snyk test --file=requirements.txt --command=python3
+       continue-on-error: true
        env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-    
      - name: Run Snyk code test
        run: snyk code test .
+       continue-on-error: true
        env:
          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+     - name: Send Gmail notification
+       if: always()
+       uses: dawidd6/action-send-mail@v3
+       with:
+         username: ${{ secrets.MAIL_USERNAME }}
+         password: ${{ secrets.MAIL_PASSWORD }}
+         server_address: smtp.gmail.com
+         server_port: 465
+         subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
+         to: ${{ secrets.MAIL_USERNAME }}
+         from: "Exam homework notifications"
+         secure: true
+         body: "${{ github.actor }}'s action for destroying INFRASTRUCTURE was REJECTED.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
 
   build_dev:
     name: Build Dev
     runs-on: ubuntu-latest
     needs: test
     steps:
-
       - name: Checkout
         uses: actions/checkout@v2
         with: 
           repository: Sturmschwalbe84/infrastructure
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-        
       - name: Create amazon ECR Repository
         id: ecr
         uses: int128/create-ecr-repository-action@v1
         with:
           repository: ${{ env.DEV_REPOSITORY }}
-      
       - name: Checkout
         uses: actions/checkout@v2
-
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }} 
-
+  
   deploy_dev:
     name: Deploy Dev
     needs: build_dev
@@ -105,44 +121,36 @@ jobs:
       run:
         working-directory: Cluster/AWS/ECS_Dev
     steps:
-
      - name: Checkout
        uses: actions/checkout@v2
        with:
           repository: Sturmschwalbe84/infrastructure
-     
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v1
        with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-
      - name: Login to Amazon ECR
        id: login-ecr
        uses: aws-actions/amazon-ecr-login@v1
-        
      - name: Get the name of the ECR repository
        id: ecr
        uses: int128/create-ecr-repository-action@v1
        with:
          repository: ${{ env.DEV_REPOSITORY }}
-     
      - name: Setup Terraform
        uses: hashicorp/setup-terraform@v1
-
      - name: Terraform fmt
        id: fmt
        run: terraform fmt -check
-
+       continue-on-error: true
      - name: Terraform Init
        id: init
        run: terraform init
-
      - name: Terraform Validate
        id: validate
        run: terraform validate -no-color
-
      - name: Terraform Apply
        id: apply
        run: terraform apply -var="Dev_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
