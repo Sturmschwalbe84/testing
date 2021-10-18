@@ -12,17 +12,10 @@ on:
 
 jobs:
   notify:
-    name: Notify about destroy
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: send custom message with args
-      uses: appleboy/telegram-action@master
-      with:
-        to: ${{ secrets.TELEGRAM_TO }}
-        token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: The ${{ inputs.name }} is trying to destroy infrustructure because of ${{ inputs.reason }}.    
-
+    uses: Sturmschwalbe84/testing/blob/main/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+        
   destroy:
     name: Destroy Infrastructure
     runs-on: ubuntu-latest
