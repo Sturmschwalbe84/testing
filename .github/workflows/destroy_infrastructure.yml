@@ -9,6 +9,7 @@ on:
 
 jobs:
   notification:
+    name: Send notification
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
@@ -16,16 +17,33 @@ jobs:
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
       
+  waiting_for_approve:
+    name: Waiting for approve
+    runs-on: ubuntu-latest
+    needs: notification
+    environment:
+      name: release
+    steps:
+      - run: echo
+
+  second_notification:
+    name: Send second notificatio
+    needs: waiting_for_approve
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *APPROVED*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+      
   destroy:
     name: Destroy Infrastructure
     runs-on: ubuntu-latest
-    needs: notification
-    environment: 
-      name: release 
+    needs:  second_notification 
     strategy:
       max-parallel: 1
       matrix:
-        terraform_working_dir: [Cluster/AWS/ECS_Blue, Cluster/AWS/Instances, Cluster/AWS/VPC]
+        terraform_working_dir: [Cluster/AWS/ECS_Dev, Cluster/AWS/ECS_Green, Cluster/AWS/ECS_Blue, Cluster/AWS/Instances, Cluster/AWS/VPC]
     defaults:
       run:
         working-directory: ${{ matrix.terraform_working_dir }}
@@ -67,7 +85,7 @@ jobs:
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     needs: destroy
     with: 
-      message: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      message: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *COMPLETED*. Infrastructure destroyed.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
