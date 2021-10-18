@@ -80,7 +80,7 @@ jobs:
         id: pylint
         run: | 
           OUTPUT="$(pylint main.py)"
-          OUTPUT="${OUTPUT//'-'/' '}"
+          OUTPUT="${OUTPUT//'-'/''}"
           OUTPUT="${OUTPUT//'%'/'%25'}"
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
@@ -153,7 +153,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v1.4.5
         with:
           issue-number: ${{github.event.number}}
-          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *DEV* branch.\n\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```\n${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```\n${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```\n${{ steps.snyk_code.outputs.snyk_code }}\n```"
+          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *DEV* branch.\n\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```"
           reactions: '+1' 
           token: ${{ secrets.GITHUB_TOKEN }}
 
