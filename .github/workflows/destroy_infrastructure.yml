@@ -13,6 +13,7 @@ jobs:
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* is requesting for approval to destroy *INFRASTRUCTURE* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body: "github.actor is requesting for approval to destroy INFRASTRUCTURE because of '${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       subject: Request for infrastructure destroy approval
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
@@ -27,13 +28,35 @@ jobs:
     environment:
       name: release
     steps:
-      - run: echo
+    - name: Send Telegram notification
+      if: ${{ job.status == 'cancelled' || job.status == 'failure' }}
+      uses: appleboy/telegram-action@master
+      with:
+        to: ${{ secrets.TELEGRAM_TO }}
+        token: ${{ secrets.TELEGRAM_TOKEN }}
+        args: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *REJECTED*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+        format: "markdown"
+    - name: Send Gmail notification
+      if: ${{ job.status == 'cancelled' || job.status == 'failure' }}
+      uses: dawidd6/action-send-mail@v3
+      with:
+        username: ${{ secrets.MAIL_USERNAME }}
+        password: ${{ secrets.MAIL_PASSWORD }}
+        server_address: smtp.gmail.com
+        server_port: 465
+        subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
+        to: ${{ secrets.MAIL_USERNAME }}
+        from: "Exam homework notifications"
+        secure: true
+        body: "${{ github.actor }}'s action for destroying INFRASTRUCTURE was REJECTED.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
+      
   second_notification:
     name: Notification
     needs: waiting_for_approve
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *APPROVED*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body: "${{ github.actor }}'s action for destroying INFRASTRUCTURE was APPROVED.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       subject: Request for infrastructure destroy was approved.
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
@@ -93,6 +116,7 @@ jobs:
     with: 
       message: "*${{ github.actor }}*'s action for destroying *INFRASTRUCTURE* was *COMPLETED*. Infrastructure destroyed.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       subject: Infrastructure destroying completed.
+      body: "${{ github.actor }}'s action for destroying INFRASTRUCTURE was COMPLETED. Infrastructure destroyed.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
