@@ -42,4 +42,3 @@ jobs:
         from: "Exam homework notifications"
         secure: true
         body: ${{ inputs.message }}
-        convert_markdown: true
