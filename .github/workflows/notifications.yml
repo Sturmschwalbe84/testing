@@ -16,7 +16,6 @@ jobs:
     name: Send notification
     runs-on: ubuntu-latest
     steps:
-
     - name: send custom message with args
       uses: appleboy/telegram-action@master
       with:
