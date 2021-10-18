@@ -147,12 +147,19 @@ jobs:
           from: "Exam homework notifications"
           secure: true
           body: ${{ steps.mail.outputs.value }}
+      - name: Create comment body
+        id: body
+        run: |
+          OUTPUT="$(### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *DEV* branch.\n\n\n**mypy:**\n\n```${{ steps.mypy.outputs.mypy }}```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}```)"
+          OUTPUT="${OUTPUT//'-'/''}"
+          echo "::set-output name=output::$OUTPUT"
+          echo ${{ steps.snyk_code.outputs.snyk_code }}
       - name: Create or Update Comment
         if: github.event_name != 'push'
         uses: peter-evans/create-or-update-comment@v1.4.5
         with:
           issue-number: ${{github.event.number}}
-          body: "${{ github.job }} job of ${{ github.repository }} for PR has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *DEV* branch.\n${{ steps.line.outputs.line }}\n*mypy:*\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}"
+          body: ${{ steps.body.outputs.output }}
           reactions: '+1' 
           token: ${{ secrets.GITHUB_TOKEN }}
 
