@@ -9,10 +9,10 @@ on:
 
 jobs:
   notification:
-    name: Send notification
+    name: Request for approval
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
-      message: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      message: "*${{ github.actor }}* is requesting for approval to destroy *INFRASTRUCTURE* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
@@ -27,7 +27,7 @@ jobs:
       - run: echo
 
   second_notification:
-    name: Send second notificatio
+    name: Notification
     needs: waiting_for_approve
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
@@ -82,6 +82,7 @@ jobs:
       continue-on-error: true
 
   notification_2:
+    name: Final notification
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     needs: destroy
     with: 
