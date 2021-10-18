@@ -8,7 +8,7 @@ on:
         required: true 
 jobs:
   notify:
-    name: Notify about destroy
+    name: Notifications test
     runs-on: ubuntu-latest
     steps:
 
@@ -17,7 +17,5 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: "*${{ github.actor }}* is trying to destroy dev because of *${{ github.event.inputs.reason }}*.\n [Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
+        args: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
         format: "markdown"
-        
-    - run: echo ${{ github.actor }}
