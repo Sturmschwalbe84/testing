@@ -12,7 +12,7 @@ on:
 
 jobs:
   notify:
-    uses: Sturmschwalbe84/testing/blob/main/.github/workflows/notifications.yml@main
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
         
