@@ -1,11 +1,11 @@
 name: Notifications test
 
-on: 
-  workflow_dispatch:
+on:
+  workflow_call:
     inputs:
-      reason:
-        description: 'Reason'
-        required: true 
+      message:
+        required: true
+        type: string
 jobs:
   notify:
     name: Notifications test
@@ -17,5 +17,7 @@ jobs:
       with:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
-        args: "*${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
+        args: ${{ inputs.message }} 
         format: "markdown"
+
+# *${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
