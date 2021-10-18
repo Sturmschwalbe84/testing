@@ -202,7 +202,7 @@ jobs:
         with:
           cond: ${{ github.event_name == 'push' }}
           if_true: "${{ github.actor }}'s code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if_false: "${{ github.actor }}'s code build has ${{ job.status }}.https://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+          if_false: "${{ github.actor }}'s code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
       - name: Send Telegram notification
         if: failure() || github.event_name != 'push'
         uses: appleboy/telegram-action@master
