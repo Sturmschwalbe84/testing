@@ -186,7 +186,6 @@ jobs:
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
       - name: Test of the image building
         if: github.event_name != 'push'
-        id: build-image
         run: docker build ./python-app -t dev-test-image:${{ env.IMAGE_TAG }}
       - name: Create Telegram notification
         if: failure() || github.event_name != 'push'
