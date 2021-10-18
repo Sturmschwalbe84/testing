@@ -31,7 +31,7 @@ jobs:
       mail_password: ${{ secrets.MAIL_PASSWORD }}
   
   notification_pr:
-    if: github.event_name == 'pull_request'
+    if: github.event_name != 'push'
     name: Notification about pr
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
@@ -43,8 +43,6 @@ jobs:
       to: ${{ secrets.TELEGRAM_TO }}
       mail_username: ${{ secrets.MAIL_USERNAME }}
       mail_password: ${{ secrets.MAIL_PASSWORD }}    
-  
-#If you use ${{github.event.number}} you will get the PR number on pull request event.
 
   tests:
     name: Tests
@@ -148,7 +146,15 @@ jobs:
           to: ${{ secrets.MAIL_USERNAME }}
           from: "Exam homework notifications"
           secure: true
-          body: ${{ steps.mail.outputs.value }} 
+          body: ${{ steps.mail.outputs.value }}
+      - name: Create or Update Comment
+        if: github.event_name != 'push'
+        uses: peter-evans/create-or-update-comment@v1.4.5
+        with:
+          issue-number: ${{github.event.number}}
+          body: "${{ github.job }} job of ${{ github.repository }} for PR has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *DEV* branch.\n${{ steps.line.outputs.line }}\n*mypy:*\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}"
+          reactions: '+1' 
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build_dev:
     name: Build Dev
@@ -209,7 +215,7 @@ jobs:
         with: 
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          args: "${{ steps.telegram.outputs.value }} " 
+          args: "${{ steps.telegram.outputs.value }}"  
           format: "markdown"
       - name: Send Gmail notification
         if: failure() || github.event_name != 'push'
@@ -223,7 +229,76 @@ jobs:
           to: ${{ secrets.MAIL_USERNAME }}
           from: "Exam homework notifications"
           secure: true
-          body: "${{ steps.mail.outputs.value }} "
+          body: "${{ steps.mail.outputs.value }}"
+      
+
+  # terraform_plan:
+  #   name: Terraform Plan
+  #   if: github.event_name != 'push'
+  #   needs: 
+  #   - tests
+  #   - build_dev
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: Cluster/AWS/ECS_Dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #       with:
+  #         repository: Sturmschwalbe84/infrastructure
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #           aws-region: ${{ secrets.AWS_REGION }}
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v1
+  #     - name: Terraform fmt
+  #       id: fmt
+  #       run: terraform fmt -check
+  #       continue-on-error: true
+  #     - name: Terraform Init
+  #       id: init
+  #       run: terraform init
+  #       continue-on-error: true
+  #     - name: Terraform Validate
+  #       id: validate
+  #       run: terraform validate -no-color
+  #       continue-on-error: true
+  #     - name: Terraform Plan
+  #       id: plan
+  #       run: terraform plan -no-color
+  #       continue-on-error: true
+  #     - uses: actions/github-script@0.9.0
+  #       if: always()
+  #       env:
+  #         PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         script: |
+  #           const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+  #           #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+  #           #### Terraform Validation 🤖\`${{ steps.validate.outputs.outcome }}\`
+  #           #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            
+  #           <details><summary>Show Plan</summary>
+            
+  #           \`\`\`\n
+  #           ${process.env.PLAN}
+  #           \`\`\`
+            
+  #           </details>
+            
+  #           *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.tf_actions_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
+              
+  #           github.issues.createComment({
+  #             issue_number: context.issue.number,
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             body: output
+  #           })
 
   second_notification:
     name: Notification about deploy
