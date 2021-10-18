@@ -1,4 +1,4 @@
-name: Notifications test
+name: Notifications
 
 on:
   workflow_call:
@@ -24,5 +24,3 @@ jobs:
         token: ${{ secrets.token }}
         args: ${{ inputs.message }} 
         format: "markdown"
-
-# *${{ github.actor }}* is trying to destroy *dev* environment because of *${{ github.event.inputs.reason }}*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
