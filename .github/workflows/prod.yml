@@ -470,7 +470,10 @@ jobs:
     needs: deploy_gruen
     steps:
       - name: Checkout
+        if: github.event_name == 'push'
         uses: actions/checkout@v2
+        with: 
+          repository: Sturmschwalbe84/infrastructure
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -486,6 +489,8 @@ jobs:
         with:
           repository: ${{ env.BLAU_REPOSITORY }}
           lifecycle-policy: Policy/blue_policy.json     
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         run: |
