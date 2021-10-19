@@ -63,3 +63,4 @@ jobs:
       - name: Terraform traffic
         id: traffic
         run: terraform apply -var="Traffic=${{ github.event.inputs.traffic }}" -auto-approve
+      - run: echo ${{ steps.traffic.outcome }}
