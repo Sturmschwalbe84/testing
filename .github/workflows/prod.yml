@@ -177,9 +177,10 @@ jobs:
   build_gruen:
     name: Build Gruen
     runs-on: ubuntu-latest
-    needs: test
+    needs: tests
     steps:
       - name: Checkout
+        if: github.event_name == 'push'
         uses: actions/checkout@v2
         with: 
           repository: Sturmschwalbe84/infrastructure
@@ -201,6 +202,8 @@ jobs:
         with:
           repository: ${{ env.GRUEN_REPOSITORY }}
           lifecycle-policy: Policy/green_policy.json
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Build, tag, and push image to Amazon ECR
         if: github.event_name == 'push'
         id: build-image
@@ -269,10 +272,79 @@ jobs:
           secure: true
           body: "${{ github.actor }}'s code was builded and pushed to ECR. Waiting for your approval for Staging env deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
 
+  terraform_plan:
+    name: Terraform Plan
+    if: github.event_name != 'push'
+    needs: 
+    - tests
+    - build_gruen
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Cluster/AWS/ECS_Dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: Sturmschwalbe84/infrastructure
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ secrets.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        continue-on-error: true
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        continue-on-error: true
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color
+        continue-on-error: true
+      - uses: actions/github-script@0.9.0
+        if: always()
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outputs.stdout }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+            
+            </details>
+            
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+              
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
 # ============================================================================== STAGING DEPLOY ============================================================================== 
 
   deploy_gruen:
     name: Deploy Gruen
+    if: github.event_name == 'push'
     needs: build_gruen
     runs-on: ubuntu-latest
     environment:
@@ -319,7 +391,7 @@ jobs:
         uses: haya14busa/action-cond@v1
         id: telegram
         with:
-          cond: ${{ failure() }}
+          cond: ${{ job.status == 'failure' }}
           if_true:  "*${{ github.actor }}*'s *Staging env* deployment has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           if_false: "*${{ github.actor }}*'s code was deployed to the *Staging env*. You can *split* traffic now.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
@@ -327,7 +399,7 @@ jobs:
         uses: haya14busa/action-cond@v1
         id: mail
         with:
-          cond: ${{ failure() }}
+          cond: ${{ job.status == 'failure' }}
           if_true:  "${{ github.actor }}'s Staging env deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if_false: "${{ github.actor }}'s code was deployed to the Staging env. You can split traffic now.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
       - name: Send Telegram notification
@@ -393,6 +465,7 @@ jobs:
 
   build_blau:
     name: Build Blau
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: deploy_gruen
     steps:
@@ -444,6 +517,7 @@ jobs:
 
   deploy_blau:
     name: Deploy Blau
+    if: github.event_name == 'push'
     needs: build_blau
     environment:
       name: release
@@ -490,7 +564,7 @@ jobs:
         uses: haya14busa/action-cond@v1
         id: telegram
         with:
-          cond: ${{ failure() }}
+          cond: ${{ job.status == 'failure' }}
           if_true:  "*${{ github.actor }}*'s *${{ github.workflow }}* deployment has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           if_false: "*${{ github.actor }}*'s code was deployed to the *${{ github.workflow }}*. You can *split* traffic now.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
@@ -498,7 +572,7 @@ jobs:
         uses: haya14busa/action-cond@v1
         id: mail
         with:
-          cond: ${{ failure() }}
+          cond: ${{ job.status == 'failure' }}
           if_true:  "${{ github.actor }}'s ${{ github.workflow }} deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if_false: "${{ github.actor }}'s code was deployed to the ${{ github.workflow }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
       - name: Send Telegram notification
