@@ -34,6 +34,7 @@ jobs:
         token: ${{ secrets.TELEGRAM_TOKEN }}
         args: "*${{ github.actor }}*'s action to destroy *INFRASTRUCTURE* because of '*${{ github.event.inputs.reason }}*' was *APPROVED*.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
         format: "markdown"
+        disable_web_page_preview: true
     - name: Send Gmail notification
       uses: dawidd6/action-send-mail@v3
       with:
