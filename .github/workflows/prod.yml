@@ -180,7 +180,10 @@ jobs:
     needs: tests
     steps:
       - name: Checkout
+        if: github.event_name == 'push'
         uses: actions/checkout@v2
+        with: 
+          repository: Sturmschwalbe84/infrastructure
       - name: Configure AWS credentials
         if: github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v1
@@ -199,6 +202,8 @@ jobs:
         with:
           repository: ${{ env.GRUEN_REPOSITORY }}
           lifecycle-policy: Policy/green_policy.json
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Build, tag, and push image to Amazon ECR
         if: github.event_name == 'push'
         id: build-image
