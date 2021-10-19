@@ -1,4 +1,4 @@
-name: Traffic
+name: Redirect Traffic 
 env:                                      
   DEV_REPOSITORY: python-app-dev       
   IMAGE_TAG: "${{ github.sha }}"
