@@ -18,7 +18,7 @@ on:
 jobs: 
   notification_push:
     if: github.event_name == 'push'
-    name: Notification about push
+    name: Push Notification 
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* pushed code to the *${{ github.workflow }}*. Code is testing and building for *${{ github.workflow }}* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
@@ -32,7 +32,7 @@ jobs:
   
   notification_pr:
     if: github.event_name != 'push'
-    name: Notification about pr
+    name: PR Notification
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* created a pull request in *${{ github.workflow }}*. Code is testing and terraform plan is running for *${{ github.workflow }}* deployment.\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
@@ -158,7 +158,7 @@ jobs:
           secure: true
           body: ${{ steps.mail.outputs.value }}
       - name: Create or Update Comment
-        if: github.event_name != 'push'
+        if: always() && github.event_name != 'push'
         uses: peter-evans/create-or-update-comment@v1.4.5
         with:
           issue-number: ${{github.event.number}}
@@ -172,6 +172,7 @@ jobs:
     needs: tests
     steps:
       - name: Checkout
+        if: github.event_name == 'push'
         uses: actions/checkout@v2
         with: 
           repository: Sturmschwalbe84/infrastructure
