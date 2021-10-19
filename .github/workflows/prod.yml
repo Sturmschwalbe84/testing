@@ -17,8 +17,10 @@ on:
       - 'README.md'
 
 jobs: 
-  
+
+
 # ========================================================================== NOTIFICATIONS ========================================================================== 
+
 
   notification_push:
     if: github.event_name == 'push'
@@ -47,8 +49,10 @@ jobs:
       to: ${{ secrets.TELEGRAM_TO }}
       mail_username: ${{ secrets.MAIL_USERNAME }}
       mail_password: ${{ secrets.MAIL_PASSWORD }}       
-  
+
+
 # ============================================================================== TESTS ==============================================================================
+  
 
   tests:
     name: Tests
@@ -126,6 +130,7 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
         if: always()
         uses: haya14busa/action-cond@v1
@@ -172,7 +177,9 @@ jobs:
           reactions: '+1' 
           token: ${{ secrets.GITHUB_TOKEN }}
 
+
 # ============================================================================== STAGING BUILD ==============================================================================  
+
 
   build_gruen:
     name: Build Gruen
@@ -213,6 +220,7 @@ jobs:
       - name: Test of the image building
         if: github.event_name != 'push'
         run: docker build ./python-app -t gruen-test-image:${{ env.IMAGE_TAG }}
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ STAGING BUILD NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Pull Telegram notification
         if: failure() || github.event_name != 'push'
         uses: haya14busa/action-cond@v1
@@ -256,7 +264,7 @@ jobs:
         with: 
          to: ${{ secrets.TELEGRAM_TO }}
          token: ${{ secrets.TELEGRAM_TOKEN }}
-         args: "*${{ github.actor }}*'s code was builded and pushed to ECR. Waiting for your approval for *Staging env* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+         args: "*${{ github.actor }}*'s code was builded and pushed to ${{ env.GRUEN_REPOSITORY }} ECR repository. Waiting for your approval for *Staging env* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
          format: "markdown"
       - name: Push Gmail notification
         if: success() && github.event_name == 'push'
@@ -270,7 +278,11 @@ jobs:
           to: ${{ secrets.MAIL_USERNAME }}
           from: "Exam homework notifications"
           secure: true
-          body: "${{ github.actor }}'s code was builded and pushed to ECR. Waiting for your approval for Staging env deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          body: "${{ github.actor }}'s code was builded and pushed to ${{ env.GRUEN_REPOSITORY }} ECR repository. Waiting for your approval for Staging env deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+
+# ============================================================================== STAGING PLAN ============================================================================== 
+
 
   terraform_plan:
     name: Terraform Plan
@@ -340,7 +352,11 @@ jobs:
               body: output
             })
 
+
+
 # ============================================================================== STAGING DEPLOY ============================================================================== 
+
+
 
   deploy_gruen:
     name: Deploy Gruen
@@ -386,6 +402,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         run: terraform apply -var="Green_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ STAGING DEPLOY NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
         if: always()
         uses: haya14busa/action-cond@v1
@@ -461,7 +478,9 @@ jobs:
   #       id: traffic
   #       run: terraform apply -var="Traffic=split" -auto-approve
 
+
 # ============================================================================== PRODUCTION BUILD ============================================================================== 
+
 
   build_blau:
     name: Build Blau
@@ -496,15 +515,32 @@ jobs:
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
           docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
-      - name: Push Telegram notification
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ PRODUCTION BUILD NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      - name: Create Telegram notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "*${{ github.actor }}*'s *{{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s *{{ github.workflow }}* code was builded and pushed to ${{ env.BLAU_REPOSITORY }} ECR repository. Waiting for your approval for *{{ github.workflow }}* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      - name: Create Gmail notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "${{ github.actor }}'s {{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "${{ github.actor }}'s {{ github.workflow }} code was builded and pushed to ${{ env.BLAU_REPOSITORY }} ECR repository. Waiting for your approval for {{ github.workflow }} deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      - name: Blau Telegram notification
         if: always()
         uses: appleboy/telegram-action@master
         with: 
          to: ${{ secrets.TELEGRAM_TO }}
          token: ${{ secrets.TELEGRAM_TOKEN }}
-         args: "*${{ github.actor }}*'s *{{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+         args: "${{ steps.telegram.outputs.value }} "
          format: "markdown"
-      - name: Push Gmail notification
+      - name: Blau Gmail notification
         if: always()
         uses: dawidd6/action-send-mail@v3
         with:
@@ -516,9 +552,11 @@ jobs:
           to: ${{ secrets.MAIL_USERNAME }}
           from: "Exam homework notifications"
           secure: true
-          body: "${{ github.actor }}'s {{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          body: "${{ steps.mail.outputs.value }} "
+
 
 # ============================================================================== PRODUCTION DEPLOY ============================================================================== 
+
 
   deploy_blau:
     name: Deploy Blau
@@ -564,6 +602,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         run: terraform apply -var="Blue_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ PRODUCTION DEPLOY NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
         if: always()
         uses: haya14busa/action-cond@v1
@@ -571,7 +610,7 @@ jobs:
         with:
           cond: ${{ job.status == 'failure' }}
           if_true:  "*${{ github.actor }}*'s *${{ github.workflow }}* deployment has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          if_false: "*${{ github.actor }}*'s code was deployed to the *${{ github.workflow }}*. You can *split* traffic now.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s code was successfully deployed to the *${{ github.workflow }}*. \n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
         if: always()
         uses: haya14busa/action-cond@v1
@@ -579,7 +618,7 @@ jobs:
         with:
           cond: ${{ job.status == 'failure' }}
           if_true:  "${{ github.actor }}'s ${{ github.workflow }} deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          if_false: "${{ github.actor }}'s code was deployed to the ${{ github.workflow }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
+          if_false: "${{ github.actor }}'s code was successfully deployed to the ${{ github.workflow }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
       - name: Send Telegram notification
         if: always()
         uses: appleboy/telegram-action@master
