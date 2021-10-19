@@ -23,7 +23,7 @@ on:
         required: true
 jobs:
   notify:
-    name: Send notification
+    name: Notification
     runs-on: ubuntu-latest
     steps:
     - name: send custom message with args
