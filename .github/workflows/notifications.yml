@@ -44,4 +44,6 @@ jobs:
         to: reinerrubin2020@gmail.com
         from: "Exam homework notifications"
         secure: true
+        convert_markdown: true
         body: ${{ inputs.body }}
+        
