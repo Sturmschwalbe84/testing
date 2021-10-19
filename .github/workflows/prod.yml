@@ -23,8 +23,8 @@ jobs:
 
 
   notification_push:
-    if: github.event_name == 'push'
     name: Push Notification 
+    if: github.event_name == 'push'
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* pushed code to the *${{ github.workflow }}*. Code is testing and building for *${{ github.workflow }}* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
@@ -37,8 +37,8 @@ jobs:
       mail_password: ${{ secrets.MAIL_PASSWORD }}
   
   notification_pr:
-    if: github.event_name != 'push'
     name: PR Notification
+    if: github.event_name != 'push'
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* created a pull request in *${{ github.workflow }}*. Code is testing and terraform plan is running for *${{ github.workflow }}* deployment.\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
@@ -56,6 +56,7 @@ jobs:
 
   tests:
     name: Tests
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest 
     defaults:
       run: 
