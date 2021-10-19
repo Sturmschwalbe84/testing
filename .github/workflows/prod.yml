@@ -339,6 +339,7 @@ jobs:
 
   deploy_gruen:
     name: Deploy Gruen
+    if: github.event_name == 'push'
     needs: build_gruen
     runs-on: ubuntu-latest
     environment:
@@ -459,6 +460,7 @@ jobs:
 
   build_blau:
     name: Build Blau
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: deploy_gruen
     steps:
@@ -510,6 +512,7 @@ jobs:
 
   deploy_blau:
     name: Deploy Blau
+    if: github.event_name == 'push'
     needs: build_blau
     environment:
       name: release
