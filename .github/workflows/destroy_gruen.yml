@@ -2,7 +2,7 @@ name: Destroy Gruen
 
 on:
   workflow_run:
-    workflows: ["CD Workflow"]
+    workflows: ["Development env"]
     branches: 
       - main
     types: 
