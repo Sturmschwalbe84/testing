@@ -319,7 +319,7 @@ jobs:
         uses: haya14busa/action-cond@v1
         id: telegram
         with:
-          cond: ${{ job.status == failure }}
+          cond: ${{ job.status == 'failure' }}
           if_true:  "*${{ github.actor }}*'s *Staging env* deployment has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           if_false: "*${{ github.actor }}*'s code was deployed to the *Staging env*. You can *split* traffic now.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       - name: Create Gmail notification
@@ -327,7 +327,7 @@ jobs:
         uses: haya14busa/action-cond@v1
         id: mail
         with:
-          cond: ${{ job.status == failure }}
+          cond: ${{ job.status == 'failure' }}
           if_true:  "${{ github.actor }}'s Staging env deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           if_false: "${{ github.actor }}'s code was deployed to the Staging env. You can split traffic now.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
       - name: Send Telegram notification
