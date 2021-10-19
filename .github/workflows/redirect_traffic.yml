@@ -15,22 +15,19 @@ on:
 jobs: 
   redirect_notification:
     name: Traffic Notification 
-  #  if: ${{ github.event.inputs.traffic }} == 'blue' || ${{ github.event.inputs.traffic }} == 'blue-80' || ${{ github.event.inputs.traffic }} == 'split' || ${{ github.event.inputs.traffic }} == 'gren-80' || ${{ github.event.inputs.traffic }} == 'green'
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
       message: "*${{ github.actor }}* requested traffic redirection to '*${{ github.event.inputs.traffic }}*' in *${{ github.workflow }}* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-      body:    "*${{ github.actor }}* requested traffic redirection to '*${{ github.event.inputs.traffic }}*' in *${{ github.workflow }}* because of '*${{ github.event.inputs.reason }}*'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body:    "${{ github.actor }} requested traffic redirection to '${{ github.event.inputs.traffic }}' in *${{ github.workflow }}* because of '${{ github.event.inputs.reason }}'.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
       subject: Notification about ${{ github.workflow }} redirection
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
       mail_username: ${{ secrets.MAIL_USERNAME }}
       mail_password: ${{ secrets.MAIL_PASSWORD }}  
-# "${{ github.actor }} requested traffic redirection to '${{ github.event.inputs.traffic }}' in ${{ github.workflow }} because of '${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
  
   redirect_traffic:
     name: Redirect Traffic
-   # if: ${{ github.event.inputs.traffic }} == 'blue' || ${{ github.event.inputs.traffic }} == 'blue-80' || ${{ github.event.inputs.traffic }} == 'split' || ${{ github.event.inputs.traffic }} == 'green-80' || ${{ github.event.inputs.traffic }} == 'green'
     needs: redirect_notification
     runs-on: ubuntu-latest
     environment:
