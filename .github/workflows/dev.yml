@@ -92,7 +92,8 @@ jobs:
         if: always()
         id: docker
         run: |
-          OUTPUT="$(dockerfilelint Dockerfile)"
+          dockerfilelint Dockerfile > docker_lint || true
+          OUTPUT="$(cat docker_lint)"
           OUTPUT="${OUTPUT//'%'/'%25'}"
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
@@ -101,7 +102,8 @@ jobs:
         if: always()
         id: mypy
         run: |
-          OUTPUT="$(mypy --ignore-missing-imports .)"
+          mypy --ignore-missing-imports . > mypy_test || true
+          OUTPUT="$(cat mypy_test)"
           OUTPUT="${OUTPUT//'%'/'%25'}"
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
@@ -110,7 +112,8 @@ jobs:
         if: always()
         id: pylint
         run: | 
-          OUTPUT="$(pylint main.py)"
+          pylint main.py > pylint_test || true
+          OUTPUT="$(cat pylint_test)"
           OUTPUT="${OUTPUT//'-'/''}"
           OUTPUT="${OUTPUT//'%'/'%25'}"
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
@@ -120,7 +123,8 @@ jobs:
         if: always()
         id: snyk_test
         run: | 
-          OUTPUT="$(snyk test --file=requirements.txt --command=python3)"
+          snyk test --file=requirements.txt --command=python3 > snyk_test || true
+          OUTPUT="$(cat snyk_test)"
           OUTPUT="${OUTPUT//'%'/'%25'}"
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
@@ -131,12 +135,12 @@ jobs:
         if: always()
         id: snyk_code
         run: |
-          OUTPUT="$(snyk code test .)"
+          snyk code test . > snyk_code || true
+          OUTPUT="$(cat snyk_code)"
           OUTPUT="${OUTPUT//'%'/'%25'}"
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=snyk_code::$OUTPUT"
-
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
