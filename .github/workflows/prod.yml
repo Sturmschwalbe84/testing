@@ -1,11 +1,12 @@
-name: CD Workflow
-
+name: Production env
 env:                                      
   BLAU_REPOSITORY: python-app-blue
   GRUEN_REPOSITORY: python-app-green                
   IMAGE_TAG: "${{ github.sha }}"
-
 on:
+  pull_request:
+    branches: 
+      - main 
   push:
     branches:
       - main 
@@ -14,60 +15,459 @@ on:
       - '.git'
       - '.gitignore'
       - 'README.md'
-      
-jobs:
-  notification:
-    name: Notification
+
+jobs: 
+  
+# ========================================================================== NOTIFICATIONS ========================================================================== 
+
+  notification_push:
+    if: github.event_name == 'push'
+    name: Push Notification 
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
-      message: "*${{ github.actor }}* pushed code to the main. Code is testing and building for *green* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      message: "*${{ github.actor }}* pushed code to the *${{ github.workflow }}*. Code is testing and building for *${{ github.workflow }}* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body: "${{ github.actor }} pushed code to the ${{ github.workflow }}. Code is testing and building for ${{ github.workflow }} deployment.'${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      subject: Notification about push to ${{ github.workflow }}
     secrets: 
       token: ${{ secrets.TELEGRAM_TOKEN }}
       to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}
   
-  test:
+  notification_pr:
+    if: github.event_name != 'push'
+    name: PR Notification
+    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
+    with: 
+      message: "*${{ github.actor }}* created a pull request in *${{ github.workflow }}*. Code is testing and terraform plan is running for *${{ github.workflow }}* deployment.\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      body: "${{ github.actor }} created a pull request in *${{ github.workflow }}*. Code is testing and terraform plan is running for ${{ github.workflow }} deployment.'${{ github.event.inputs.reason }}'.\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      subject: Notification about pull request in ${{ github.workflow }}
+    secrets: 
+      token: ${{ secrets.TELEGRAM_TOKEN }}
+      to: ${{ secrets.TELEGRAM_TO }}
+      mail_username: ${{ secrets.MAIL_USERNAME }}
+      mail_password: ${{ secrets.MAIL_PASSWORD }}       
+  
+# ============================================================================== TESTS ==============================================================================
+
+  tests:
     name: Tests
     runs-on: ubuntu-latest 
-    strategy:
-      matrix:
-        python: [3.6, 3.9]
     defaults:
       run: 
         working-directory: python-app
     steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-     - name: Install Python ${{ matrix.python }}
-       uses: actions/setup-python@v2
-       with:
-         python-version: ${{ matrix.python }}
-     - name: Install requirements
-       run: |
-         python -m pip install --upgrade pip
-         pip install mypy pylint
-         pip install -r requirements.txt
-     - name: Install Snyk
-       uses: snyk/actions/setup@master
-     - name: Run mypy
-       run: mypy --ignore-missing-imports . 
-     - name: Run pylint
-       run: pylint main.py
-     - name: Run Snyk test
-       run: snyk test --file=requirements.txt --command=python3
-       env:
-         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-     - name: Run Snyk code test
-       run: snyk code test .
-       env:
-         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install Python 3.6
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      - id: line
+        run: echo "::set-output name=line::$(echo ================================)" 
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy pylint
+          pip install -r requirements.txt
+      - name: Install Snyk
+        uses: snyk/actions/setup@master
+      - uses: actions/setup-node@v2
+      - run: npm install
+      - name: Install dockerfilelint
+        run: npm install -g dockerfilelint
+      - name: Run Dockerlint
+        id: docker
+        run: |
+          OUTPUT="$(dockerfilelint Dockerfile)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=docker::$OUTPUT"
+        continue-on-error: true 
+      - name: Run mypy
+        id: mypy
+        run: |
+          OUTPUT="$(mypy --ignore-missing-imports .)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=mypy::$OUTPUT" 
+        continue-on-error: true
+      - name: Run pylint
+        id: pylint
+        run: | 
+          OUTPUT="$(pylint main.py)"
+          OUTPUT="${OUTPUT//'-'/''}"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=pylint::$OUTPUT"
+        continue-on-error: true
+      - name: Run Snyk test
+        id: snyk_test
+        run: | 
+          OUTPUT="$(snyk test --file=requirements.txt --command=python3)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=snyk_test::$OUTPUT"
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Run Snyk code test
+        id: snyk_code
+        run: |
+          OUTPUT="$(snyk code test .)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=snyk_code::$OUTPUT"
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Create Telegram notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ github.event_name == 'push' }}
+          if_true:  "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
+      - name: Create Gmail notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ github.event_name == 'push' }}
+          if_true:  "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+          if_false: "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+      - name: Send Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: ${{ steps.telegram.outputs.value }} 
+         format: "markdown"
+      - name: Send Gmail notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: ${{ steps.mail.outputs.value }}
+      - name: Create or Update Comment
+        if: always() && github.event_name != 'push'
+        uses: peter-evans/create-or-update-comment@v1.4.5
+        with:
+          issue-number: ${{github.event.number}}
+          body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n**${{ github.actor }}**'s code test results for **${{ github.workflow }}** branch.\n\n\n**dockerfilelint:**\n\n```${{ steps.docker.outputs.docker }}\n```\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```\n\n*Pusher: @${{ github.actor }}, Action: `${{ github.event_name }}`, Workflow: `${{ github.workflow }}`*"
+          reactions: '+1' 
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  
-# =========================================== STAGING ==================================================
+# ============================================================================== STAGING BUILD ==============================================================================  
 
   build_gruen:
     name: Build Gruen
     runs-on: ubuntu-latest
-    needs: test
+    needs: tests
+    steps:
+      - name: Checkout
+        if: github.event_name == 'push'
+        uses: actions/checkout@v2
+        with: 
+          repository: Sturmschwalbe84/infrastructure
+      - name: Configure AWS credentials
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Create Amazon ECR Repository
+        if: github.event_name == 'push'
+        id: ecr
+        uses: int128/create-ecr-repository-action@v1
+        with:
+          repository: ${{ env.GRUEN_REPOSITORY }}
+          lifecycle-policy: Policy/green_policy.json
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build, tag, and push image to Amazon ECR
+        if: github.event_name == 'push'
+        id: build-image
+        run: |
+          docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
+          docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
+      - name: Test of the image building
+        if: github.event_name != 'push'
+        run: docker build ./python-app -t gruen-test-image:${{ env.IMAGE_TAG }}
+      - name: Create Pull Telegram notification
+        if: failure() || github.event_name != 'push'
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ github.event_name == 'push' }}
+          if_true:  "*${{ github.actor }}*'s code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s code build has *${{ job.status }}*\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
+      - name: Create Pull Gmail notification
+        if: failure() || github.event_name != 'push'
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ github.event_name == 'push' }}
+          if_true:  "${{ github.actor }}'s code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "${{ github.actor }}'s code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+      - name: Pull Telegram notification
+        if: failure() || github.event_name != 'push'
+        uses: appleboy/telegram-action@master
+        with: 
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          args: "${{ steps.telegram.outputs.value }}"  
+          format: "markdown"
+      - name: Pull Gmail notification
+        if: failure() || github.event_name != 'push'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: "${{ github.workflow }}: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}"
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: "${{ steps.mail.outputs.value }}"
+      - name: Push Telegram notification
+        if: success() && github.event_name == 'push'
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: "*${{ github.actor }}*'s code was builded and pushed to ECR. Waiting for your approval for *Staging env* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+         format: "markdown"
+      - name: Push Gmail notification
+        if: success() && github.event_name == 'push'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: Notification about merge to ${{ github.workflow }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: "${{ github.actor }}'s code was builded and pushed to ECR. Waiting for your approval for Staging env deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+
+  terraform_plan:
+    name: Terraform Plan
+    if: github.event_name != 'push'
+    needs: 
+    - tests
+    - build_gruen
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Cluster/AWS/ECS_Dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: Sturmschwalbe84/infrastructure
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            aws-region: ${{ secrets.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        continue-on-error: true
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        continue-on-error: true
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color
+        continue-on-error: true
+      - uses: actions/github-script@0.9.0
+        if: always()
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outputs.stdout }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+            
+            </details>
+            
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+              
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+# ============================================================================== STAGING DEPLOY ============================================================================== 
+
+  deploy_gruen:
+    name: Deploy Gruen
+    if: github.event_name == 'push'
+    needs: build_gruen
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    defaults:
+      run:
+        working-directory: Cluster/AWS/ECS_Green
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: Sturmschwalbe84/infrastructure
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+           aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1       
+      - name: Get the name of the ECR repository
+        id: ecr
+        uses: int128/create-ecr-repository-action@v1
+        with:
+          repository: ${{ env.GRUEN_REPOSITORY }}     
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+      - name: Terraform Init
+        id: init
+        run: terraform init
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -var="Green_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
+      - name: Create Telegram notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "*${{ github.actor }}*'s *Staging env* deployment has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s code was deployed to the *Staging env*. You can *split* traffic now.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      - name: Create Gmail notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "${{ github.actor }}'s Staging env deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "${{ github.actor }}'s code was deployed to the Staging env. You can split traffic now.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
+      - name: Send Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: ${{ steps.telegram.outputs.value }} 
+         format: "markdown"
+      - name: Send Gmail notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: ${{ github.job }} job of ${{ github.repository }} in Staging env has ${{ job.status }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: ${{ steps.mail.outputs.value }} 
+      
+
+  # split_traffic:
+  #   name: Split Traffic
+  #   needs: split_notification
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: staging
+  #   defaults:
+  #     run:
+  #       working-directory: Cluster/AWS/Instances
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #       with:
+  #         repository: Sturmschwalbe84/infrastructure
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v1
+  #       with:
+  #           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #           aws-region: ${{ secrets.AWS_REGION }}  
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v1
+  #     - name: Terraform fmt
+  #       id: fmt
+  #       run: terraform fmt -check
+  #       continue-on-error: true
+  #     - name: Terraform Init
+  #       id: init
+  #       run: terraform init
+  #     - name: Terraform Validate
+  #       id: validate
+  #       run: terraform validate -no-color
+  #     - name: Terraform traffic
+  #       id: traffic
+  #       run: terraform apply -var="Traffic=split" -auto-approve
+
+# ============================================================================== PRODUCTION BUILD ============================================================================== 
+
+  build_blau:
+    name: Build Blau
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: deploy_gruen
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -79,161 +479,46 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v1        
       - name: Create Amazon ECR Repository
         id: ecr
         uses: int128/create-ecr-repository-action@v1
         with:
-          repository: ${{ env.GRUEN_REPOSITORY }}
-          lifecycle-policy: Policy/green_policy.json
+          repository: ${{ env.BLAU_REPOSITORY }}
+          lifecycle-policy: Policy/blue_policy.json     
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         run: |
           docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
-          docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}    
+          docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
+      - name: Push Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: "*${{ github.actor }}*'s *{{ github.workflow }}* code build has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+         format: "markdown"
+      - name: Push Gmail notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: Notification about merge to ${{ github.workflow }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: "${{ github.actor }}'s {{ github.workflow }} code build has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-  gruen_notification:
-    name: Green request
-    needs: build_gruen
-    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
-    with: 
-      message: "*${{ github.actor }}*'s code was builded and pushed to ECR. Waiting for your approval for *green* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-    secrets: 
-      token: ${{ secrets.TELEGRAM_TOKEN }}
-      to: ${{ secrets.TELEGRAM_TO }}
-
-  deploy_gruen:
-    name: Deploy Gruen
-    needs:
-     - gruen_notification
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-    defaults:
-      run:
-        working-directory: Cluster/AWS/ECS_Green
-    steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-       with:
-         repository: Sturmschwalbe84/infrastructure
-     - name: Configure AWS credentials
-       uses: aws-actions/configure-aws-credentials@v1
-       with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-     - name: Login to Amazon ECR
-       id: login-ecr
-       uses: aws-actions/amazon-ecr-login@v1       
-     - name: Get the name of the ECR repository
-       id: ecr
-       uses: int128/create-ecr-repository-action@v1
-       with:
-         repository: ${{ env.GRUEN_REPOSITORY }}     
-     - name: Setup Terraform
-       uses: hashicorp/setup-terraform@v1
-     - name: Terraform fmt
-       id: fmt
-       run: terraform fmt -check
-     - name: Terraform Init
-       id: init
-       run: terraform init
-     - name: Terraform Validate
-       id: validate
-       run: terraform validate -no-color
-     - name: Terraform Apply
-       id: apply
-       run: terraform apply -var="Green_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
-
-  split_notification:
-    name: Split request
-    needs: deploy_gruen
-    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
-    with: 
-      message: "*${{ github.actor }}*'s code was deployed to the *green* environment. Waiting for your approval to *split* traffic.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-    secrets: 
-      token: ${{ secrets.TELEGRAM_TOKEN }}
-      to: ${{ secrets.TELEGRAM_TO }}
-
-  split_traffic:
-    name: Split Traffic
-    needs: split_notification
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-    defaults:
-      run:
-        working-directory: Cluster/AWS/Instances
-    steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-       with:
-         repository: Sturmschwalbe84/infrastructure
-     - name: Configure AWS credentials
-       uses: aws-actions/configure-aws-credentials@v1
-       with:
-           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-           aws-region: ${{ secrets.AWS_REGION }}  
-     - name: Setup Terraform
-       uses: hashicorp/setup-terraform@v1
-     - name: Terraform fmt
-       id: fmt
-       run: terraform fmt -check
-     - name: Terraform Init
-       id: init
-       run: terraform init
-     - name: Terraform Validate
-       id: validate
-       run: terraform validate -no-color
-     - name: Terraform traffic
-       id: traffic
-       run: terraform apply -var="Traffic=split" -auto-approve
-
-# =========================================== PRODUCTION ==================================================
-
-  build_blau:
-    name: Build Blau
-    runs-on: ubuntu-latest
-    needs: split_traffic
-    steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-     - name: Configure AWS credentials
-       uses: aws-actions/configure-aws-credentials@v1
-       with:
-         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-         aws-region: ${{ secrets.AWS_REGION }}
-     - name: Login to Amazon ECR
-       id: login-ecr
-       uses: aws-actions/amazon-ecr-login@v1        
-     - name: Create Amazon ECR Repository
-       id: ecr
-       uses: int128/create-ecr-repository-action@v1
-       with:
-         repository: ${{ env.BLAU_REPOSITORY }}
-         lifecycle-policy: Policy/blue_policy.json     
-     - name: Build, tag, and push image to Amazon ECR
-       id: build-image
-       run: |
-         docker build ./python-app -t ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
-         docker push ${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}
-
-  blau_notification:
-    name: Blau request
-    needs: build_blau
-    uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
-    with: 
-      message: "*${{ github.actor }}*'s code was builded and pushed to ECR. Waiting for your approval for *BLUE* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-    secrets: 
-      token: ${{ secrets.TELEGRAM_TOKEN }}
-      to: ${{ secrets.TELEGRAM_TO }}
+# ============================================================================== PRODUCTION DEPLOY ============================================================================== 
 
   deploy_blau:
     name: Deploy Blau
-    needs: blau_notification
+    if: github.event_name == 'push'
+    needs: build_blau
     environment:
       name: release
     runs-on: ubuntu-latest
@@ -241,35 +526,73 @@ jobs:
       run:
         working-directory: Cluster/AWS/ECS_Blue
     steps:
-     - name: Checkout
-       uses: actions/checkout@v2
-       with:
-          repository: Sturmschwalbe84/infrastructure   
-     - name: Configure AWS credentials
-       uses: aws-actions/configure-aws-credentials@v1
-       with:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+           repository: Sturmschwalbe84/infrastructure   
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-     - name: Login to Amazon ECR
-       id: login-ecr
-       uses: aws-actions/amazon-ecr-login@v1 
-     - name: Get the name of the ECR repository
-       id: ecr
-       uses: int128/create-ecr-repository-action@v1
-       with:
-         repository: ${{ env.BLAU_REPOSITORY }}
-     - name: Setup Terraform
-       uses: hashicorp/setup-terraform@v1
-     - name: Terraform fmt
-       id: fmt
-       run: terraform fmt -check
-     - name: Terraform Init
-       id: init
-       run: terraform init
-     - name: Terraform Validate
-       id: validate
-       run: terraform validate -no-color
-     - name: Terraform Apply
-       id: apply
-       run: terraform apply -var="Blue_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1 
+      - name: Get the name of the ECR repository
+        id: ecr
+        uses: int128/create-ecr-repository-action@v1
+        with:
+          repository: ${{ env.BLAU_REPOSITORY }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+      - name: Terraform Init
+        id: init
+        run: terraform init
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -var="Blue_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
+      - name: Create Telegram notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "*${{ github.actor }}*'s *${{ github.workflow }}* deployment has *${{ job.status }}*\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "*${{ github.actor }}*'s code was deployed to the *${{ github.workflow }}*. You can *split* traffic now.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+      - name: Create Gmail notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ job.status == 'failure' }}
+          if_true:  "${{ github.actor }}'s ${{ github.workflow }} deployment has ${{ job.status }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if_false: "${{ github.actor }}'s code was deployed to the ${{ github.workflow }}.\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"    
+      - name: Send Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: ${{ steps.telegram.outputs.value }} 
+         format: "markdown"
+      - name: Send Gmail notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: ${{ github.job }} job of ${{ github.repository }} in ${{ github.workflow }} has ${{ job.status }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: ${{ steps.mail.outputs.value }} 
