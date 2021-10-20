@@ -156,6 +156,7 @@ jobs:
          token: ${{ secrets.TELEGRAM_TOKEN }}
          args: ${{ steps.telegram.outputs.value }} 
          format: "markdown"
+         disable_web_page_preview: true
       - name: Send Gmail notification
         if: always()
         uses: dawidd6/action-send-mail@v3
@@ -246,6 +247,7 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           args: "${{ steps.telegram.outputs.value }}"  
           format: "markdown"
+          disable_web_page_preview: true
       - name: Pull Gmail notification
         if: failure() || github.event_name != 'push'
         uses: dawidd6/action-send-mail@v3
@@ -267,6 +269,7 @@ jobs:
          token: ${{ secrets.TELEGRAM_TOKEN }}
          args: "*${{ github.actor }}*'s code was builded and pushed to ${{ env.GRUEN_REPOSITORY }} ECR repository. Waiting for your approval for *Staging env* deployment.\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
          format: "markdown"
+         disable_web_page_preview: true
       - name: Push Gmail notification
         if: success() && github.event_name == 'push'
         uses: dawidd6/action-send-mail@v3
@@ -428,6 +431,7 @@ jobs:
          token: ${{ secrets.TELEGRAM_TOKEN }}
          args: ${{ steps.telegram.outputs.value }} 
          format: "markdown"
+         disable_web_page_preview: true
       - name: Send Gmail notification
         if: always()
         uses: dawidd6/action-send-mail@v3
@@ -504,6 +508,7 @@ jobs:
          token: ${{ secrets.TELEGRAM_TOKEN }}
          args: "${{ steps.telegram.outputs.value }} "
          format: "markdown"
+         disable_web_page_preview: true
       - name: Blau Gmail notification
         if: always()
         uses: dawidd6/action-send-mail@v3
@@ -591,6 +596,7 @@ jobs:
          token: ${{ secrets.TELEGRAM_TOKEN }}
          args: ${{ steps.telegram.outputs.value }} 
          format: "markdown"
+         disable_web_page_preview: true
       - name: Send Gmail notification
         if: always()
         uses: dawidd6/action-send-mail@v3
