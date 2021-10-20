@@ -180,11 +180,9 @@ jobs:
 # ============================================================================== BUILD ==============================================================================
 
 
-
   build_dev:
     name: Build Dev
     runs-on: ubuntu-latest
-    needs: tests
     steps:
       - name: Checkout
         if: github.event_name == 'push'
