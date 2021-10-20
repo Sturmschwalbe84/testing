@@ -186,7 +186,6 @@ jobs:
   build_gruen:
     name: Build Gruen
     runs-on: ubuntu-latest
-    needs: tests
     steps:
       - name: Checkout
         if: github.event_name == 'push'
