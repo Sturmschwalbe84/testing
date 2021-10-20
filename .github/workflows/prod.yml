@@ -23,7 +23,7 @@ jobs:
 
 
   notification_push:
-    name: Push Notification 
+    name: Push
     if: github.event_name == 'push'
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
@@ -37,7 +37,7 @@ jobs:
       mail_password: ${{ secrets.MAIL_PASSWORD }}
   
   notification_pr:
-    name: PR Notification
+    name: Pull Request
     if: github.event_name != 'push'
     uses: Sturmschwalbe84/testing/.github/workflows/notifications.yml@main
     with: 
