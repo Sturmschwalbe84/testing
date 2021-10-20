@@ -311,7 +311,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Cluster/AWS/ECS_Dev
+        working-directory: Cluster/AWS/ECS_Green
     steps:
       - name: Checkout
         uses: actions/checkout@v2
