@@ -46,6 +46,7 @@ jobs:
 
   tests:
     name: Tests
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest 
     defaults:
       run: 
