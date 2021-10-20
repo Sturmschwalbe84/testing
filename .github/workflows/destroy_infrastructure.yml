@@ -74,16 +74,9 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
-    - name: Terraform fmt
-      id: fmt
-      run: terraform fmt -check
-      continue-on-error: true
     - name: Terraform Init
       id: init
       run: terraform init
-    - name: Terraform Validate
-      id: validate
-      run: terraform validate -no-color
     - name: Terraform destroy
       id: destroy
       run: terraform destroy -auto-approve
