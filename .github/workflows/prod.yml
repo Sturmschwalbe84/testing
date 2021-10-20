@@ -63,25 +63,36 @@ jobs:
         working-directory: python-app
     steps:
       - name: Checkout
+        if: always()
         uses: actions/checkout@v2
       - name: Install Python 3.6
+        if: always()
         uses: actions/setup-python@v2
         with:
           python-version: 3.6
       - id: line
+        if: always()
         run: echo "::set-output name=line::$(echo ================================)" 
       - name: Install requirements
+        if: always()
         run: |
           python -m pip install --upgrade pip
           pip install mypy pylint
           pip install -r requirements.txt
       - name: Install Snyk
+        if: always()
         uses: snyk/actions/setup@master
-      - uses: actions/setup-node@v2
-      - run: npm install
+      - name: Setup Node.js
+        if: always()
+        uses: actions/setup-node@v2
+      - name: Setup npm
+        if: always()
+        run: npm install
       - name: Install dockerfilelint
+        if: always()
         run: npm install -g dockerfilelint
       - name: Run Dockerlint
+        if: always()
         id: docker
         run: |
           OUTPUT="$(dockerfilelint Dockerfile)"
@@ -89,8 +100,8 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=docker::$OUTPUT"
-        continue-on-error: true 
       - name: Run mypy
+        if: always()
         id: mypy
         run: |
           OUTPUT="$(mypy --ignore-missing-imports .)"
@@ -98,8 +109,8 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=mypy::$OUTPUT" 
-        continue-on-error: true
       - name: Run pylint
+        if: always()
         id: pylint
         run: | 
           OUTPUT="$(pylint main.py)"
@@ -108,8 +119,8 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=pylint::$OUTPUT"
-        continue-on-error: true
       - name: Run Snyk test
+        if: always()
         id: snyk_test
         run: | 
           OUTPUT="$(snyk test --file=requirements.txt --command=python3)"
@@ -117,10 +128,10 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=snyk_test::$OUTPUT"
-        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       - name: Run Snyk code test
+        if: always()
         id: snyk_code
         run: |
           OUTPUT="$(snyk code test .)"
@@ -128,7 +139,6 @@ jobs:
           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
           echo "::set-output name=snyk_code::$OUTPUT"
-        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
