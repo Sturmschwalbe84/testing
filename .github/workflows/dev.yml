@@ -16,6 +16,9 @@ on:
       - 'README.md'
   
 jobs: 
+
+# ============================================================================== NOTIFICATIONS ==============================================================================
+
   notification_push:
     if: github.event_name == 'push'
     name: Push Notification 
@@ -43,6 +46,10 @@ jobs:
       to: ${{ secrets.TELEGRAM_TO }}
       mail_username: ${{ secrets.MAIL_USERNAME }}
       mail_password: ${{ secrets.MAIL_PASSWORD }}    
+
+
+# ============================================================================== TESTS ==============================================================================
+
 
   tests:
     name: Tests
@@ -121,6 +128,7 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
         if: always()
         uses: haya14busa/action-cond@v1
@@ -168,6 +176,11 @@ jobs:
           reactions: '+1' 
           token: ${{ secrets.GITHUB_TOKEN }}
 
+
+# ============================================================================== BUILD ==============================================================================
+
+
+
   build_dev:
     name: Build Dev
     runs-on: ubuntu-latest
@@ -206,6 +219,7 @@ jobs:
       - name: Test of the image building
         if: github.event_name != 'push'
         run: docker build ./python-app -t dev-test-image:${{ env.IMAGE_TAG }}
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ BUILD NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Create Telegram notification
         if: failure() || github.event_name != 'push'
         uses: haya14busa/action-cond@v1
@@ -244,7 +258,11 @@ jobs:
           from: "Exam homework notifications"
           secure: true
           body: "${{ steps.mail.outputs.value }}"
-      
+ 
+ 
+ # ============================================================================== TERRAFORM PLAN ==============================================================================
+ 
+ 
   terraform_plan:
     name: Terraform Plan
     if: github.event_name != 'push'
@@ -313,6 +331,10 @@ jobs:
               body: output
             })
 
+  
+  # ============================================================================== DEVELOPMENT ENV ==============================================================================
+  
+  
   second_notification:
     name: Notification about deploy
     if: github.event_name == 'push'
@@ -372,6 +394,7 @@ jobs:
       - name: Terraform Apply
         id: apply
         run: terraform apply -var="Dev_Container=${{ steps.ecr.outputs.repository-uri }}:${{ env.IMAGE_TAG }}" -auto-approve
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ DEVELOPMENT DEPLOY NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       - name: Send Telegram notification
         if: always()
         uses: appleboy/telegram-action@master
