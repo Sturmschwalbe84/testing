@@ -47,148 +47,139 @@ jobs:
 #       mail_password: ${{ secrets.MAIL_PASSWORD }}       
 
 
-# # ============================================================================== TESTS ==============================================================================
+# ============================================================================== TESTS ==============================================================================
   
 
-#   tests:
-#     name: Tests
-#     if: github.event_name != 'push'
-#     runs-on: ubuntu-latest 
-#     defaults:
-#       run: 
-#         working-directory: python-app
-#     steps:
-#       - name: Checkout
-#         if: always()
-#         uses: actions/checkout@v2
-#       - name: Install Python 3.6
-#         if: always()
-#         uses: actions/setup-python@v2
-#         with:
-#           python-version: 3.6
-#       - id: line
-#         if: always()
-#         run: echo "::set-output name=line::$(echo ================================)" 
-#       - name: Install requirements
-#         if: always()
-#         run: |
-#           python -m pip install --upgrade pip
-#           pip install mypy pylint
-#           pip install -r requirements.txt
-#       - name: Install Snyk
-#         if: always()
-#         uses: snyk/actions/setup@master
-#       - name: Setup Node.js
-#         if: always()
-#         uses: actions/setup-node@v2
-#       - name: Setup npm
-#         if: always()
-#         run: npm install
-#       - name: Install dockerfilelint
-#         if: always()
-#         run: npm install -g dockerfilelint
-#       - name: Run Dockerlint
-#         if: always()
-#         id: docker
-#         run: |
-#           dockerfilelint Dockerfile > docker_lint || true
-#           OUTPUT="$(cat docker_lint)"
-#           OUTPUT="${OUTPUT//'%'/'%25'}"
-#           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
-#           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
-#           echo "::set-output name=docker::$OUTPUT"
-#       - name: Run mypy
-#         if: always()
-#         id: mypy
-#         run: |
-#           mypy --ignore-missing-imports . > mypy_test || true
-#           OUTPUT="$(cat mypy_test)"
-#           OUTPUT="${OUTPUT//'%'/'%25'}"
-#           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
-#           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
-#           echo "::set-output name=mypy::$OUTPUT" 
-#       - name: Run pylint
-#         if: always()
-#         id: pylint
-#         run: | 
-#           pylint main.py > pylint_test || true
-#           OUTPUT="$(cat pylint_test)"
-#           OUTPUT="${OUTPUT//'-'/''}"
-#           OUTPUT="${OUTPUT//'%'/'%25'}"
-#           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
-#           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
-#           echo "::set-output name=pylint::$OUTPUT"
-#       - name: Run Snyk test
-#         if: always()
-#         id: snyk_test
-#         run: | 
-#           snyk test --file=requirements.txt --command=python3 > snyk_test || true
-#           OUTPUT="$(cat snyk_test)"
-#           OUTPUT="${OUTPUT//'%'/'%25'}"
-#           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
-#           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
-#           echo "::set-output name=snyk_test::$OUTPUT"
-#         env:
-#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-#       - name: Run Snyk code test
-#         if: always()
-#         id: snyk_code
-#         run: |
-#           snyk code test . > snyk_code || true
-#           OUTPUT="$(cat snyk_code)"
-#           OUTPUT="${OUTPUT//'%'/'%25'}"
-#           OUTPUT="${OUTPUT//$'\n'/'%0A'}"
-#           OUTPUT="${OUTPUT//$'\r'/'%0D'}"
-#           echo "::set-output name=snyk_code::$OUTPUT"
-#         env:
-#           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-# # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#       - name: Create Telegram notification
-#         if: failure() || success()
-#         uses: haya14busa/action-cond@v1
-#         id: telegram
-#         with:
-#           cond: ${{ github.event_name == 'push' }}
-#           if_true:  "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-#           if_false: "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
-#       - name: Create Gmail notification
-#         if: failure() || success()
-#         uses: haya14busa/action-cond@v1
-#         id: mail
-#         with:
-#           cond: ${{ github.event_name == 'push' }}
-#           if_true:  "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
-#           if_false: "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
-#       - name: Send Telegram notification
-#         if: failure() || success()
-#         uses: appleboy/telegram-action@master
-#         with: 
-#          to: ${{ secrets.TELEGRAM_TO }}
-#          token: ${{ secrets.TELEGRAM_TOKEN }}
-#          args: ${{ steps.telegram.outputs.value }} 
-#          format: "markdown"
-#          disable_web_page_preview: true
-#       - name: Send Gmail notification
-#         if: failure() || success()
-#         uses: dawidd6/action-send-mail@v3
-#         with:
-#           username: ${{ secrets.MAIL_USERNAME }}
-#           password: ${{ secrets.MAIL_PASSWORD }}
-#           server_address: smtp.gmail.com
-#           server_port: 465
-#           subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
-#           to: ${{ secrets.MAIL_USERNAME }}
-#           from: "Exam homework notifications"
-#           secure: true
-#           body: ${{ steps.mail.outputs.value }}
-#       - name: Create or Update Comment
-#         if: failure() || success()
-#         uses: peter-evans/create-or-update-comment@v1.4.5
-#         with:
-#           issue-number: ${{github.event.number}}
-#           body: "### ${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n**${{ github.actor }}**'s code test results for **${{ github.workflow }}** branch.\n\n\n**dockerfilelint:**\n\n```${{ steps.docker.outputs.docker }}\n```\n\n**mypy:**\n\n```\n${{ steps.mypy.outputs.mypy }}\n```\n\n**pylint:**\n\n```${{ steps.pylint.outputs.pylint }}\n```\n\n**Snyk Test:**\n\n```${{ steps.snyk_test.outputs.snyk_test }}\n```\n\n**Snyk Code Test:**\n\n```${{ steps.snyk_code.outputs.snyk_code }}\n```\n\n*Pusher: @${{ github.actor }}, Action: `${{ github.event_name }}`, Workflow: `${{ github.workflow }}`*"
-#           reactions: '+1' 
-#           token: ${{ secrets.GITHUB_TOKEN }}
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest 
+    defaults:
+      run: 
+        working-directory: python-app
+    steps:
+      - name: Checkout
+        if: always()
+        uses: actions/checkout@v2
+      - name: Install Python 3.6
+        if: always()
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      - id: line
+        if: always()
+        run: echo "::set-output name=line::$(echo ================================)" 
+      - name: Install requirements
+        if: always()
+        run: |
+          python -m pip install --upgrade pip
+          pip install mypy pylint
+          pip install -r requirements.txt
+      - name: Install Snyk
+        if: always()
+        uses: snyk/actions/setup@master
+      - name: Setup Node.js
+        if: always()
+        uses: actions/setup-node@v2
+      - name: Setup npm
+        if: always()
+        run: npm install
+      - name: Install dockerfilelint
+        if: always()
+        run: npm install -g dockerfilelint
+      - name: Run Dockerlint
+        if: always()
+        id: docker
+        run: |
+          dockerfilelint Dockerfile > docker_lint || true
+          OUTPUT="$(cat docker_lint)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=docker::$OUTPUT"
+      - name: Run mypy
+        if: always()
+        id: mypy
+        run: |
+          mypy --ignore-missing-imports . > mypy_test || true
+          OUTPUT="$(cat mypy_test)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=mypy::$OUTPUT" 
+      - name: Run pylint
+        if: always()
+        id: pylint
+        run: | 
+          pylint main.py > pylint_test || true
+          OUTPUT="$(cat pylint_test)"
+          OUTPUT="${OUTPUT//'-'/''}"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=pylint::$OUTPUT"
+      - name: Run Snyk test
+        if: always()
+        id: snyk_test
+        run: | 
+          snyk test --file=requirements.txt --command=python3 > snyk_test || true
+          OUTPUT="$(cat snyk_test)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=snyk_test::$OUTPUT"
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Run Snyk code test
+        if: always()
+        id: snyk_code
+        run: |
+          snyk code test . > snyk_code || true
+          OUTPUT="$(cat snyk_code)"
+          OUTPUT="${OUTPUT//'%'/'%25'}"
+          OUTPUT="${OUTPUT//$'\n'/'%0A'}"
+          OUTPUT="${OUTPUT//$'\r'/'%0D'}"
+          echo "::set-output name=snyk_code::$OUTPUT"
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TESTS NOTIFICATIONS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      - name: Create Telegram notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: telegram
+        with:
+          cond: ${{ github.event_name == 'push' }}
+          if_true:  "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the action.](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+          if_false: "${{ github.job }} job of ${{ github.repository }} has *${{ job.status }}*\n\n*${{ github.actor }}*'s code test results for *${{ github.workflow }}* branch.\n${{ steps.line.outputs.line }}\n*dockerfilelint:*\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\n*mypy:*\n\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\n*pylint:*${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\n*Snyk Test:*${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\n*Snyk Code Test:*${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\n[Link to the PR](https://github.com/${{ github.repository }}/pull/${{github.event.number}})\n\n[Link to the action](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" 
+      - name: Create Gmail notification
+        if: always()
+        uses: haya14busa/action-cond@v1
+        id: mail
+        with:
+          cond: ${{ github.event_name == 'push' }}
+          if_true:  "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+          if_false: "${{ github.actor }}'s code test results for ${{ github.workflow }} branch.\n${{ steps.line.outputs.line }}\ndockerfilelint:\n\n${{ steps.docker.outputs.docker }}\n${{ steps.line.outputs.line }}\nmypy:\n${{ steps.mypy.outputs.mypy }}\n${{ steps.line.outputs.line }}\npylint:${{ steps.pylint.outputs.pylint }}\n${{ steps.line.outputs.line }}\nSnyk Test:${{ steps.snyk_test.outputs.snyk_test }}\n${{ steps.line.outputs.line }}\nSnyk Code Test:${{ steps.snyk_code.outputs.snyk_code }}\n${{ steps.line.outputs.line }}\n\nhttps://github.com/${{ github.repository }}/pull/${{github.event.number}}\n\nhttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" 
+      - name: Send Telegram notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with: 
+         to: ${{ secrets.TELEGRAM_TO }}
+         token: ${{ secrets.TELEGRAM_TOKEN }}
+         args: ${{ steps.telegram.outputs.value }} 
+         format: "markdown"
+         disable_web_page_preview: true
+      - name: Send Gmail notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          server_address: smtp.gmail.com
+          server_port: 465
+          subject: ${{ github.job }} job of ${{ github.repository }} has ${{ job.status }}
+          to: ${{ secrets.MAIL_USERNAME }}
+          from: "Exam homework notifications"
+          secure: true
+          body: ${{ steps.mail.outputs.value }}
 
 
 # ============================================================================== STAGING BUILD ==============================================================================  
@@ -196,6 +187,7 @@ jobs:
 
   build_gruen:
     name: Build Gruen
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
